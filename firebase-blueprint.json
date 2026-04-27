@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "Prediction": {
+      "title": "Prediction",
+      "description": "A daily match prediction entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "league": { "type": "string" },
+        "homeTeam": { "type": "string" },
+        "awayTeam": { "type": "string" },
+        "tip": { "type": "string" },
+        "odds": { "type": "string" },
+        "status": { "type": "string", "enum": ["won", "lost", "pending"] }
+      },
+      "required": ["date", "league", "homeTeam", "awayTeam", "tip", "odds", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System alert or news notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "isRead": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["info", "success", "alert"] }
+      },
+      "required": ["title", "message", "timestamp", "type"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback submission",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "type": { "type": "string", "enum": ["suggestion", "bug", "complaint", "praise"] },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "type", "message", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/predictions/{predictionId}": {
+      "schema": "Prediction",
+      "description": "Global collection of match tips"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Global announcements and updates"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User feedback submissions"
+    },
+    "/stats/global": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "totalPredictions": { "type": "number" },
+          "wins": { "type": "number" },
+          "losses": { "type": "number" },
+          "accuracy": { "type": "number" }
+        }
+      },
+      "description": "Global performance statistics"
+    }
+  }
+}

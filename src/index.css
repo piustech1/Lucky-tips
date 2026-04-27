@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-primary: #00BFA6;
+  --color-secondary: #1DE9B6;
+  --color-primary-dark: #00897B;
+  --color-win: #00C853;
+  --color-lose: #D50000;
+  --color-pending: #FF9100;
+}
+
+@layer base {
+  :root {
+    --background: #F8F9FA;
+    --foreground: #1A1A1A;
+    --card: #FFFFFF;
+    --card-foreground: #1A1A1A;
+    --muted: #E0F7F5;
+    --muted-foreground: #6C757D;
+    --border: #E5E5E5;
+    --accent: #E0F7F5;
+  }
+
+  .dark {
+    --background: #0D0D0D;
+    --foreground: #FFFFFF;
+    --card: #1E1E1E;
+    --card-foreground: #FFFFFF;
+    --muted: #003F3A;
+    --muted-foreground: #AAAAAA;
+    --border: #2A2A2A;
+    --accent: #003F3A;
+  }
+
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased transition-colors duration-300;
+  }
+}
+
+@layer utilities {
+  .bg-premium-gradient {
+    background: linear-gradient(135deg, #00BFA6 0%, #1DE9B6 100%);
+  }
+
+  .bg-premium-glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+  
+  .text-glow-teal {
+    text-shadow: 0 0 10px rgba(0, 191, 166, 0.5);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+

@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Predictions: Publicly readable for the purpose of the applet
+    match /predictions/{predictionId} {
+      allow read: if true; 
+      allow write: if false; 
+    }
+
+    // Notifications: Publicly readable
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Feedback: Publicly writable with validation
+    match /feedback/{feedbackId} {
+      allow create: if isValidId(feedbackId) 
+        && incoming().name is string && incoming().name.size() <= 100
+        && incoming().email is string && incoming().email.matches('^.+@.+$')
+        && incoming().message is string && incoming().message.size() <= 5000
+        && incoming().createdAt == request.time;
+      allow read: if false; 
+    }
+
+    // Global Stats: Publicly readable
+    match /stats/{statId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

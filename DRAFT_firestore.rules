@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128; }
+    function incoming() { return request.resource.data; }
+
+    // Predictions: Publicly readable (if app is authenticated via passkey, but Firebase level doesn't know about UI passkey)
+    // In a real premium app, we might use a shared account or anonymous auth, 
+    // but here we'll allow read if the client is potentially "known" or just open read/write restricted.
+    match /predictions/{predictionId} {
+      allow read: if true; // In a real app, restrict to authenticated users
+      allow write: if false; // Only admin via console/server
+    }
+
+    // Notifications: Publicly readable
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Feedback: Publicly writable (with limits)
+    match /feedback/{feedbackId} {
+      allow create: if isValidId(feedbackId) 
+        && incoming().name is string && incoming().name.size() <= 100
+        && incoming().email is string && incoming().email.matches('^.+@.+$')
+        && incoming().message is string && incoming().message.size() <= 1000;
+      allow read, update, delete: if false;
+    }
+
+    // Global Stats: Publicly readable
+    match /stats/global {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
