@@ -46,7 +46,12 @@ export default function AdminLayout() {
                 </div>
                 <div>
                    <h1 className="text-xl font-black tracking-tighter flex items-center gap-1 lowercase">
-                     <span className="italic bg-premium-gradient bg-clip-text text-transparent">lucky</span>
+                     <span 
+                       className="bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent italic inline-block"
+                       style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+                     >
+                       lucky
+                     </span>
                      <span className="text-[#1A1A1A]">panel</span>
                    </h1>
                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-zinc-400 -mt-1 lowercase">management engine v2</p>

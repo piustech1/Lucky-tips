@@ -55,47 +55,45 @@ export default function Notifications() {
         </div>
       </div>
 
-      <div className="space-y-4 px-4">
+      <div className="space-y-3 px-4">
         {notifications.map((item, index) => {
           const { icon: Icon, color, bg, label } = getTypeStyles(item.type);
           
           return (
             <motion.div
               key={item.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
               className={cn(
-                "group relative p-4 rounded-3xl border transition-all duration-300",
+                "group relative p-2.5 rounded-2xl border transition-all duration-300",
                 !item.isRead 
-                  ? "bg-[var(--card)] border-[var(--border)] shadow-lg shadow-black/5" 
-                  : "bg-[var(--muted)]/50 border-transparent opacity-60"
+                  ? "bg-[var(--card)] border-[var(--border)] shadow-sm hover:shadow-md" 
+                  : "bg-zinc-50/50 border-zinc-100 opacity-60"
               )}
             >
-              {!item.isRead && (
-                <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(0,191,166,0.5)]" />
-              )}
-              
-              <div className="flex gap-4 items-center">
-                <div className={cn("shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner", bg)}>
-                  <Icon className={cn("w-6 h-6", color)} />
+              <div className="flex gap-3 items-center">
+                <div className={cn("shrink-0 w-9 h-9 rounded-xl flex items-center justify-center", bg)}>
+                  <Icon className={cn("w-4 h-4", color)} />
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className={cn("text-[8px] font-black uppercase tracking-widest lowercase", color)}>{label}</span>
-                    <span className="text-[9px] font-medium text-[var(--muted-foreground)] tabular-nums lowercase">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className={cn("font-black text-[12px] leading-tight lowercase truncate", !item.isRead ? "text-zinc-900" : "text-zinc-500")}>
+                      {item.title}
+                    </h3>
+                    <span className="text-[8px] font-bold text-zinc-400 tabular-nums lowercase shrink-0">
                       {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
                     </span>
                   </div>
-
-                  <h3 className={cn("font-black text-sm leading-tight lowercase truncate", !item.isRead ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]")}>
-                    {item.title}
-                  </h3>
-                  <p className="text-[var(--muted-foreground)] text-[10px] leading-tight lowercase tracking-tight line-clamp-1">
+                  <p className="text-zinc-500 text-[10px] leading-tight lowercase tracking-tight line-clamp-1 mt-0.5 opacity-80">
                     {item.message}
                   </p>
                 </div>
+
+                {!item.isRead && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />
+                )}
               </div>
             </motion.div>
           );

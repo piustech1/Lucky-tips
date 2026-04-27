@@ -63,7 +63,16 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
       <ScrollToTop />
       <header className="fixed top-0 left-0 right-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-4 h-16 flex items-center justify-between max-w-md mx-auto">
         <h1 className="text-xl font-black tracking-tight flex items-center gap-1.5 lowercase">
-          <span className="bg-premium-gradient bg-clip-text text-transparent italic">lucky</span>
+          <span 
+            className="bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent italic inline-block" 
+            style={{ 
+              WebkitBackgroundClip: 'text', 
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}
+          >
+            lucky
+          </span>
           <span className="text-[var(--foreground)]">tips</span>
           <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(0,191,166,0.5)]" />
         </h1>
