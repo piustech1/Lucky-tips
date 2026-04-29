@@ -74,7 +74,11 @@ export default function AdminTips() {
     status: 'pending'
   });
 
+  const [logoSearch, setLogoSearch] = useState<{ type: 'home' | 'away' | 'league', query: string, results: any[] }>({ type: 'home', query: '', results: [] });
   const [logoLoading, setLogoLoading] = useState({ home: false, away: false, league: false });
+  const [isSearchingLogo, setIsSearchingLogo] = useState(false);
+  const [isSubmittingResult, setIsSubmittingResult] = useState<{ id: string, status: string } | null>(null);
+  const [finalScore, setFinalScore] = useState('');
 
   useEffect(() => {
     const predictionsRef = ref(rtdb, 'predictions');
@@ -100,24 +104,34 @@ export default function AdminTips() {
     return () => unsubscribe();
   }, []);
 
-  const handleLogoFetch = async (type: 'home' | 'away', name: string) => {
-    if (!name || name.length < 3) return;
+  const handleManualLogoSearch = async (type: 'home' | 'away' | 'league', searchQuery: string) => {
+    if (!searchQuery || searchQuery.length < 3) return;
     setLogoLoading(prev => ({ ...prev, [type]: true }));
-    const logo = await findTeamLogo(name);
-    if (logo) {
-      setFormData(prev => ({ ...prev, [`${type}Logo`]: logo }));
+    try {
+      const endpoint = type === 'league' ? 'leagues' : 'teams';
+      const response = await fetch(`/api/proxy/sports?endpoint=${endpoint}&search=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+      if (data.response) {
+        setLogoSearch({ type, query: searchQuery, results: data.response });
+        setIsSearchingLogo(true);
+      }
+    } catch (error) {
+      console.error('Logo Search Error:', error);
+    } finally {
+      setLogoLoading(prev => ({ ...prev, [type]: false }));
     }
-    setLogoLoading(prev => ({ ...prev, [type]: false }));
   };
 
-  const handleLeagueLogoFetch = async (name: string) => {
-    if (!name || name.length < 3) return;
-    setLogoLoading(prev => ({ ...prev, league: true }));
-    const logo = await findLeagueLogo(name);
-    if (logo) {
-      setFormData(prev => ({ ...prev, leagueLogo: logo }));
-    }
-    setLogoLoading(prev => ({ ...prev, league: false }));
+  const selectLogo = (item: any) => {
+    const logo = logoSearch.type === 'league' ? item.league.logo : item.team.logo;
+    const name = logoSearch.type === 'league' ? item.league.name : item.team.name;
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      [`${logoSearch.type}${logoSearch.type === 'league' ? '' : 'Team'}`]: name,
+      [`${logoSearch.type}Logo`]: logo 
+    }));
+    setIsSearchingLogo(false);
   };
 
   const handleAddTip = async (e: React.FormEvent) => {
@@ -153,10 +167,15 @@ export default function AdminTips() {
     }
   };
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: string, scoreText?: string) => {
     try {
       const tipRef = ref(rtdb, `predictions/${id}`);
-      await update(tipRef, { status });
+      await update(tipRef, { 
+        status,
+        score: scoreText || '' 
+      });
+      setIsSubmittingResult(null);
+      setFinalScore('');
     } catch (error) {
       console.error('RTDB Update Error:', error);
     }
@@ -287,8 +306,8 @@ export default function AdminTips() {
 
                <div className="flex items-center gap-3 pt-4 border-t border-zinc-100/50">
                   <div className="flex-1 flex gap-2">
-                     <StatusIcon active={tip.status === 'won'} color="win" icon={CheckCircle2} onClick={() => updateStatus(tip.id, 'won')} />
-                     <StatusIcon active={tip.status === 'lost'} color="lost" icon={XCircle} onClick={() => updateStatus(tip.id, 'lost')} />
+                     <StatusIcon active={tip.status === 'won'} color="win" icon={CheckCircle2} onClick={() => setIsSubmittingResult({ id: tip.id, status: 'won' })} />
+                     <StatusIcon active={tip.status === 'lost'} color="lost" icon={XCircle} onClick={() => setIsSubmittingResult({ id: tip.id, status: 'lost' })} />
                      <StatusIcon active={tip.status === 'pending'} color="zinc" icon={Clock} onClick={() => updateStatus(tip.id, 'pending')} />
                   </div>
                   <button 
@@ -333,7 +352,7 @@ export default function AdminTips() {
                  </button>
               </div>
 
-              <form className="p-10 overflow-y-auto space-y-10 custom-scrollbar" onSubmit={handleAddTip}>
+              <form className="p-10 overflow-y-auto space-y-10 custom-scrollbar" onSubmit={(e) => { e.preventDefault(); handleAddTip(e); }}>
                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <div className="space-y-6">
                        <div className="grid grid-cols-2 gap-4">
@@ -344,7 +363,7 @@ export default function AdminTips() {
                             logo={formData.homeLogo}
                             loading={logoLoading.home}
                             onChange={(e: any) => setFormData({...formData, homeTeam: e.target.value})}
-                            onBlur={() => handleLogoFetch('home', formData.homeTeam)}
+                            onSearch={() => handleManualLogoSearch('home', formData.homeTeam)}
                           />
                           <TeamInput 
                             label="Away Faction" 
@@ -353,7 +372,7 @@ export default function AdminTips() {
                             logo={formData.awayLogo}
                             loading={logoLoading.away}
                             onChange={(e: any) => setFormData({...formData, awayTeam: e.target.value})}
-                            onBlur={() => handleLogoFetch('away', formData.awayTeam)}
+                            onSearch={() => handleManualLogoSearch('away', formData.awayTeam)}
                           />
                        </div>
 
@@ -364,14 +383,20 @@ export default function AdminTips() {
                               placeholder="Premier League"
                               value={formData.league}
                               onChange={(e) => setFormData({...formData, league: e.target.value})}
-                              onBlur={() => handleLeagueLogoFetch(formData.league)}
                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-14 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
                             />
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1.5 border border-zinc-100">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1.5 border border-zinc-100 shadow-sm">
                                {logoLoading.league ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : (
                                  <img src={formData.leagueLogo || 'https://via.placeholder.com/50'} className="w-full h-full object-contain" />
                                )}
                             </div>
+                            <button 
+                              type="button"
+                              onClick={() => handleManualLogoSearch('league', formData.league)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-primary/10 rounded-xl transition-colors"
+                            >
+                               <Search className="w-4 h-4 text-primary" />
+                            </button>
                          </div>
                        </div>
                     </div>
@@ -461,6 +486,7 @@ export default function AdminTips() {
                     </div>
 
                     <button 
+                      type="submit"
                       disabled={isSubmitting}
                       className="w-full md:w-auto h-20 px-16 bg-premium-gradient text-white rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 hover:scale-[1.03] active:scale-97 transition-all flex items-center justify-center gap-4 disabled:opacity-50"
                     >
@@ -470,6 +496,106 @@ export default function AdminTips() {
                  </div>
               </form>
             </motion.div>
+          </div>
+        )}
+
+        {isSearchingLogo && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="absolute inset-0 bg-[#0A0A0A]/60 backdrop-blur-sm"
+               onClick={() => setIsSearchingLogo(false)}
+             />
+             <motion.div
+               initial={{ scale: 0.9, opacity: 0 }}
+               animate={{ scale: 1, opacity: 1 }}
+               exit={{ scale: 0.9, opacity: 0 }}
+               className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[70vh]"
+             >
+                <div className="p-8 border-b border-zinc-100 flex items-center justify-between">
+                   <div>
+                      <h4 className="text-xl font-black italic lowercase tracking-tight">Select Identity</h4>
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">pick the correct logo from matrix</p>
+                   </div>
+                   <XCircle className="w-6 h-6 text-zinc-300 cursor-pointer hover:text-zinc-900 transition-colors" onClick={() => setIsSearchingLogo(false)} />
+                </div>
+                <div className="p-6 overflow-y-auto space-y-3 custom-scrollbar">
+                   {logoSearch.results.length === 0 ? (
+                      <p className="text-center py-10 text-zinc-400 text-[10px] font-black uppercase tracking-widest">No matching frequencies found</p>
+                   ) : (
+                      logoSearch.results.map((item, i) => (
+                         <div 
+                           key={i} 
+                           onClick={() => selectLogo(item)}
+                           className="p-4 rounded-2xl hover:bg-zinc-50 border border-transparent hover:border-zinc-100 cursor-pointer flex items-center gap-4 transition-all"
+                         >
+                            <div className="w-12 h-12 bg-white rounded-xl border border-zinc-100 p-2 flex items-center justify-center">
+                               <img src={logoSearch.type === 'league' ? item.league.logo : item.team.logo} className="w-full h-full object-contain" />
+                            </div>
+                            <div className="flex-1">
+                               <p className="text-sm font-black italic lowercase">{logoSearch.type === 'league' ? item.league.name : item.team.name}</p>
+                               <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">{logoSearch.type === 'league' ? 'Market League' : item.team.country || 'Global Club'}</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-zinc-300" />
+                         </div>
+                      ))
+                   )}
+                </div>
+             </motion.div>
+          </div>
+        )}
+
+        {isSubmittingResult && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="absolute inset-0 bg-primary/20 backdrop-blur-md"
+               onClick={() => setIsSubmittingResult(null)}
+             />
+             <motion.div
+               initial={{ scale: 0.9, opacity: 0 }}
+               animate={{ scale: 1, opacity: 1 }}
+               exit={{ scale: 0.9, opacity: 0 }}
+               className="relative w-full max-w-md bg-white rounded-[48px] shadow-2xl p-10 space-y-8"
+             >
+                <div className="text-center space-y-2">
+                   <div className="w-20 h-20 bg-primary/10 rounded-[32px] mx-auto flex items-center justify-center border border-primary/20">
+                      <Trophy className="w-10 h-10 text-primary" />
+                   </div>
+                   <h4 className="text-3xl font-black italic lowercase tracking-tight">Sync Result</h4>
+                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">record the final full-time score</p>
+                </div>
+
+                <div className="space-y-4">
+                   <div className="space-y-2">
+                      <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Score Pattern (FT)</label>
+                      <input 
+                        placeholder="e.g. 2 - 1"
+                        value={finalScore}
+                        onChange={(e) => setFinalScore(e.target.value)}
+                        className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-8 text-lg font-black text-center outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-200"
+                        autoFocus
+                      />
+                   </div>
+                   
+                   <button 
+                     onClick={() => updateStatus(isSubmittingResult.id, isSubmittingResult.status, finalScore)}
+                     className="w-full h-16 bg-[#103D39] text-primary rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                   >
+                      Confirm Injection
+                   </button>
+                   <button 
+                     onClick={() => setIsSubmittingResult(null)}
+                     className="w-full text-center text-[10px] font-black text-zinc-300 uppercase tracking-widest hover:text-zinc-500 transition-colors"
+                   >
+                      Abort Sync
+                   </button>
+                </div>
+             </motion.div>
           </div>
         )}
       </AnimatePresence>

@@ -8,7 +8,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import PredictionCard from '../components/PredictionCard';
 import { CATEGORIES } from '../constants';
 import { ArrowLeft, Target, Lock } from 'lucide-react';
-import { MOCK_PREDICTIONS } from '../lib/mockData';
 import { useUser } from '../contexts/UserContext';
 
 export default function Sections() {

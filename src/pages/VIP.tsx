@@ -7,7 +7,6 @@ import { Prediction } from '../types';
 import { cn } from '../lib/utils';
 import PredictionCard from '../components/PredictionCard';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_PREDICTIONS } from '../lib/mockData';
 
 const THEMED_CATEGORIES = [
   { id: 'vip', label: 'elite analytics', icon: Crown, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
@@ -46,14 +45,6 @@ export default function VIP() {
             if (cat.id === 'vip') return p.isVip;
             return p.category === cat.id;
           }).slice(0, 3);
-          
-          if (docs.length === 0) {
-            if (cat.id === 'vip') {
-              docs = MOCK_PREDICTIONS.filter(p => p.isVip).slice(0, 3);
-            } else {
-              docs = MOCK_PREDICTIONS.filter(p => p.category === cat.id).slice(0, 3);
-            }
-          }
           
           categorized[cat.id] = docs;
         }
