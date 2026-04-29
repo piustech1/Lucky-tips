@@ -111,13 +111,15 @@ export default function AdminTips() {
       const API_KEY = '7f1e72e61225defa847ad7d9dbc1d5a9';
       const BASE_URL = 'https://v3.football.api-sports.io';
       const endpoint = type === 'league' ? 'leagues' : 'teams';
-      const response = await fetch(`${BASE_URL}/${endpoint}?search=${encodeURIComponent(searchQuery)}`, {
+      const response = await fetch(`${BASE_URL}/${endpoint}?name=${encodeURIComponent(searchQuery)}`, {
         method: 'GET',
         headers: {
           'x-apisports-key': API_KEY,
         }
       });
       const data = await response.json();
+      console.log(`Manual API Search Result (${type}):`, data);
+      
       if (data.response) {
         setLogoSearch({ type, query: searchQuery, results: data.response });
         setIsSearchingLogo(true);
@@ -546,14 +548,14 @@ export default function AdminTips() {
              >
                 <div className="p-8 border-b border-zinc-100 flex items-center justify-between">
                    <div>
-                      <h4 className="text-xl font-black italic lowercase tracking-tight">Select Identity</h4>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">pick the correct logo from matrix</p>
+                      <h4 className="text-xl font-black italic lowercase tracking-tight">Select Official Logo</h4>
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Choose from verified API responses</p>
                    </div>
                    <XCircle className="w-6 h-6 text-zinc-300 cursor-pointer hover:text-zinc-900 transition-colors" onClick={() => setIsSearchingLogo(false)} />
                 </div>
                 <div className="p-6 overflow-y-auto space-y-3 custom-scrollbar">
                    {logoSearch.results.length === 0 ? (
-                      <p className="text-center py-10 text-zinc-400 text-[10px] font-black uppercase tracking-widest">No matching frequencies found</p>
+                      <p className="text-center py-10 text-zinc-400 text-[10px] font-black uppercase tracking-widest">Logo not found</p>
                    ) : (
                       logoSearch.results.map((item, i) => (
                          <div 

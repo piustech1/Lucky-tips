@@ -51,6 +51,7 @@ export async function findTeamLogo(teamName: string): Promise<string> {
     });
 
     const data = await response.json();
+    console.log(`API Team Response for ${teamName}:`, data);
     
     if (data.response && data.response.length > 0) {
       const logoUrl = data.response[0].team.logo;
@@ -83,6 +84,7 @@ export async function findLeagueLogo(leagueName: string): Promise<string> {
     });
 
     const data = await response.json();
+    console.log(`API League Response for ${leagueName}:`, data);
     
     if (data.response && data.response.length > 0) {
       const logoUrl = data.response[0].league.logo;
