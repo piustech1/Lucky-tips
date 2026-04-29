@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Trophy, Search, Shield, Save, Loader2, 
-  ChevronRight, CheckCircle2, AlertCircle, Globe, Key 
+  ChevronRight, CheckCircle2, AlertCircle, Globe, Key, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ref, set, get, update } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
-import { fetchFromFootballAPI, getActiveKeyIndex, setActiveKey } from '../../services/apiService';
+import { fetchFromFootballAPI, getActiveKeyIndex, setActiveKeyIndex } from '../../services/apiService';
 
 interface League {
   league: {
@@ -39,12 +39,29 @@ export default function AdminLogoManager() {
   const [isLoadingLeagues, setIsLoadingLeagues] = useState(false);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLeagues();
   }, []);
+
+  const deleteAllLogos = async () => {
+    if (!window.confirm('Are you absolutely sure you want to delete ALL cached logos? This action cannot be reversed.')) return;
+    
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await set(ref(rtdb, 'logos'), null);
+      setSuccess('Logo cache cleared from terminal');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError('Failed to purge cache');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const fetchLeagues = async () => {
     setIsLoadingLeagues(true);
@@ -88,18 +105,16 @@ export default function AdminLogoManager() {
     try {
       const updates: any = {};
       
-      // Map all leagues to updates
+      // Map all leagues to updates using names as keys
       leagues.forEach(l => {
-        updates[`leagues/${l.league.id}`] = {
-          name: l.league.name,
+        updates[`leagues/${l.league.name}`] = {
           logo: l.league.logo
         };
       });
 
-      // Map all loaded teams to updates
+      // Map all loaded teams to updates using names as keys
       teams.forEach(t => {
-        updates[`teams/${t.team.id}`] = {
-          name: t.team.name,
+        updates[`teams/${t.team.name}`] = {
           logo: t.team.logo,
           leagueId: selectedLeague
         };
@@ -127,14 +142,24 @@ export default function AdminLogoManager() {
           <h1 className="text-4xl font-black tracking-tighter lowercase text-[#1A1A1A]">logo manager</h1>
           <p className="text-zinc-400 text-sm font-bold uppercase tracking-widest mt-1 lowercase">api-football synchronization engine</p>
         </div>
-        <button 
-          onClick={saveAllLogos}
-          disabled={isSaving || (leagues.length === 0 && teams.length === 0)}
-          className="h-16 px-10 bg-premium-gradient text-white rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
-        >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          save all logos
-        </button>
+        <div className="flex flex-wrap gap-4">
+          <button 
+            onClick={deleteAllLogos}
+            disabled={isDeleting}
+            className="h-16 px-8 bg-zinc-100 text-zinc-500 rounded-[32px] font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-red-50 hover:text-red-600 transition-all disabled:opacity-50"
+          >
+            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            delete all logos
+          </button>
+          <button 
+            onClick={saveAllLogos}
+            disabled={isSaving || (leagues.length === 0 && teams.length === 0)}
+            className="h-16 px-10 bg-premium-gradient text-white rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            save all logos
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

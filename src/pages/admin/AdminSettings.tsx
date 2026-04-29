@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
-import { getActiveKeyIndex, setActiveKey } from '../../services/apiService';
+import { getActiveKeyIndex, setActiveKeyIndex } from '../../services/apiService';
 
 export default function AdminSettings() {
   const [activeKey, setKey] = React.useState(getActiveKeyIndex());
 
-  const handleKeyToggle = (index: 1 | 2) => {
-    setActiveKey(index);
+  const handleKeyToggle = (index: number) => {
+    setActiveKeyIndex(index);
     setKey(index);
   };
 
@@ -46,24 +46,18 @@ export default function AdminSettings() {
                     <p className="text-[9px] font-bold text-zinc-400 lowercase">Select which subscription tunnel to use</p>
                  </div>
                  <div className="flex bg-white p-1 rounded-2xl border border-zinc-100">
-                   <button 
-                     onClick={() => handleKeyToggle(1)}
-                     className={cn(
-                       "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
-                       activeKey === 1 ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-zinc-600"
-                     )}
-                   >
-                     Key 1
-                   </button>
-                   <button 
-                     onClick={() => handleKeyToggle(2)}
-                     className={cn(
-                       "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
-                       activeKey === 2 ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-zinc-600"
-                     )}
-                   >
-                     Key 2
-                   </button>
+                   {[0, 1, 2].map((idx) => (
+                     <button 
+                       key={idx}
+                       onClick={() => handleKeyToggle(idx)}
+                       className={cn(
+                         "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
+                         activeKey === idx ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-zinc-600"
+                       )}
+                     >
+                       Key {idx + 1}
+                     </button>
+                   ))}
                  </div>
               </div>
               <AdminSettingInput label="Logo Auto-Fetch Provider" value="api-sports.io" />
