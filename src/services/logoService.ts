@@ -1,8 +1,6 @@
 import { ref, get, set } from 'firebase/database';
 import { rtdb } from '../lib/firebase';
-
-const API_KEY = '7f1e72e61225defa847ad7d9dbc1d5a9';
-const BASE_URL = 'https://v3.football.api-sports.io';
+import { fetchFromFootballAPI } from './apiService';
 
 /**
  * Checks the logo cache in Firebase RTDB
@@ -41,16 +39,9 @@ export async function findTeamLogo(teamName: string): Promise<string> {
   const cached = await getCachedLogo('teams', teamName);
   if (cached) return cached;
   
-  // 2. Fetch from API
+  // 2. Fetch from API with failover
   try {
-    const response = await fetch(`${BASE_URL}/teams?name=${encodeURIComponent(teamName)}`, {
-      method: 'GET',
-      headers: {
-        'x-apisports-key': API_KEY,
-      }
-    });
-
-    const data = await response.json();
+    const data = await fetchFromFootballAPI(`teams?name=${encodeURIComponent(teamName)}`);
     console.log(`API Team Response for ${teamName}:`, data);
     
     if (data.response && data.response.length > 0) {
@@ -74,16 +65,9 @@ export async function findLeagueLogo(leagueName: string): Promise<string> {
   const cached = await getCachedLogo('leagues', leagueName);
   if (cached) return cached;
   
-  // 2. Fetch from API
+  // 2. Fetch from API with failover
   try {
-    const response = await fetch(`${BASE_URL}/leagues?name=${encodeURIComponent(leagueName)}`, {
-      method: 'GET',
-      headers: {
-        'x-apisports-key': API_KEY,
-      }
-    });
-
-    const data = await response.json();
+    const data = await fetchFromFootballAPI(`leagues?name=${encodeURIComponent(leagueName)}`);
     console.log(`API League Response for ${leagueName}:`, data);
     
     if (data.response && data.response.length > 0) {

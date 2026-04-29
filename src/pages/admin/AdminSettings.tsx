@@ -6,8 +6,16 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
+import { getActiveKeyIndex, setActiveKey } from '../../services/apiService';
 
 export default function AdminSettings() {
+  const [activeKey, setKey] = React.useState(getActiveKeyIndex());
+
+  const handleKeyToggle = (index: 1 | 2) => {
+    setActiveKey(index);
+    setKey(index);
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[40px] border border-[#E9ECEF]">
@@ -32,7 +40,32 @@ export default function AdminSettings() {
            </div>
 
            <div className="space-y-6">
-              <AdminSettingInput label="Sports API Key" type="password" value="••••••••••••••••" />
+              <div className="p-6 bg-zinc-50 rounded-3xl border border-zinc-100 flex items-center justify-between">
+                 <div className="space-y-1">
+                    <h5 className="text-[11px] font-black lowercase tracking-tight">Active API Key</h5>
+                    <p className="text-[9px] font-bold text-zinc-400 lowercase">Select which subscription tunnel to use</p>
+                 </div>
+                 <div className="flex bg-white p-1 rounded-2xl border border-zinc-100">
+                   <button 
+                     onClick={() => handleKeyToggle(1)}
+                     className={cn(
+                       "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
+                       activeKey === 1 ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-zinc-600"
+                     )}
+                   >
+                     Key 1
+                   </button>
+                   <button 
+                     onClick={() => handleKeyToggle(2)}
+                     className={cn(
+                       "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
+                       activeKey === 2 ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-zinc-600"
+                     )}
+                   >
+                     Key 2
+                   </button>
+                 </div>
+              </div>
               <AdminSettingInput label="Logo Auto-Fetch Provider" value="api-sports.io" />
               <AdminSettingInput label="System Currency" value="USD ($)" />
               <div className="flex items-center justify-between p-6 bg-zinc-50 rounded-3xl border border-zinc-100">

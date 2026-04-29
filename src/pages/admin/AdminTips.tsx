@@ -23,6 +23,8 @@ import { rtdb } from '../../lib/firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
 import { findTeamLogo, findLeagueLogo, saveLogoToCache } from '../../services/logoService';
 
+import { fetchFromFootballAPI } from '../../services/apiService';
+
 const CATEGORIES = [
   { id: 'free', label: 'Free Tips', icon: Sparkles },
   { id: 'vip', label: 'VIP Tips', icon: Zap },
@@ -108,16 +110,9 @@ export default function AdminTips() {
     if (!searchQuery || searchQuery.length < 3) return;
     setLogoLoading(prev => ({ ...prev, [type]: true }));
     try {
-      const API_KEY = '7f1e72e61225defa847ad7d9dbc1d5a9';
-      const BASE_URL = 'https://v3.football.api-sports.io';
       const endpoint = type === 'league' ? 'leagues' : 'teams';
-      const response = await fetch(`${BASE_URL}/${endpoint}?name=${encodeURIComponent(searchQuery)}`, {
-        method: 'GET',
-        headers: {
-          'x-apisports-key': API_KEY,
-        }
-      });
-      const data = await response.json();
+      const data = await fetchFromFootballAPI(`${endpoint}?name=${encodeURIComponent(searchQuery)}`);
+      
       console.log(`Manual API Search Result (${type}):`, data);
       
       if (data.response) {

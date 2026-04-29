@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Trophy, Search, Shield, Save, Loader2, 
-  ChevronRight, CheckCircle2, AlertCircle, Globe 
+  ChevronRight, CheckCircle2, AlertCircle, Globe, Key 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ref, set, get, update } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
-
-const API_KEY = '7f1e72e61225defa847ad7d9dbc1d5a9';
-const BASE_URL = 'https://v3.football.api-sports.io';
+import { fetchFromFootballAPI, getActiveKeyIndex, setActiveKey } from '../../services/apiService';
 
 interface League {
   league: {
@@ -52,12 +50,7 @@ export default function AdminLogoManager() {
     setIsLoadingLeagues(true);
     setError(null);
     try {
-      const response = await fetch(`${BASE_URL}/leagues`, {
-        headers: {
-          'x-apisports-key': API_KEY
-        }
-      });
-      const data = await response.json();
+      const data = await fetchFromFootballAPI('leagues');
       if (data.response) {
         setLeagues(data.response);
       } else {
@@ -76,12 +69,7 @@ export default function AdminLogoManager() {
     setTeams([]);
     setError(null);
     try {
-      const response = await fetch(`${BASE_URL}/teams?league=${leagueId}&season=2024`, {
-        headers: {
-          'x-apisports-key': API_KEY
-        }
-      });
-      const data = await response.json();
+      const data = await fetchFromFootballAPI(`teams?league=${leagueId}&season=2024`);
       if (data.response) {
         setTeams(data.response);
       } else {
