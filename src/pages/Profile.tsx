@@ -1,13 +1,48 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, ShieldCheck, Mail, Calendar, LogOut, ChevronRight, Award, Star, Zap, Phone, Lock, Unlock } from 'lucide-react';
+import { User, ShieldCheck, Mail, Calendar, LogOut, ChevronRight, Award, Star, Zap, Phone, Lock, Loader2, Camera, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUser } from '../contexts/UserContext';
+import { auth } from '../lib/firebase';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+
+const LOGO_URL = "https://i.postimg.cc/c1j7ByYH/1000856002-removebg-preview.png";
 
 export default function Profile() {
-  const { isVip, setIsVip, phoneNumber, username, setUsername, premiumExpiry } = useUser();
-  
-  // Deterministic avatar based on username
-  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+  const { user, profile, isVip, updateProfile } = useUser();
+  const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({
+    displayName: profile?.displayName || '',
+    phoneNumber: profile?.phoneNumber || '',
+  });
+
+  if (!profile) return (
+    <div className="flex items-center justify-center p-20">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+
+  const avatarUrl = profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.uid}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate('/login');
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfile(editedProfile);
+      setIsEditing(false);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-8 pb-10 relative">
@@ -21,9 +56,12 @@ export default function Profile() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--background)]/40 to-[var(--background)]" />
       </div>
 
+      <div className="flex justify-center pt-8 relative z-10">
+         <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-16 h-16 object-contain drop-shadow-xl" />
+      </div>
+
       {/* Profile Header */}
-      <section className="relative pt-12 pb-6 flex flex-col items-center z-10">
-        {/* Glow behind avatar */}
+      <section className="relative pt-4 pb-6 flex flex-col items-center z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/10 blur-[80px] rounded-full pointer-events-none" />
         
         <motion.div 
@@ -31,9 +69,12 @@ export default function Profile() {
           animate={{ scale: 1, opacity: 1 }}
           className="relative group mb-6"
         >
-          <div className="w-36 h-36 rounded-[48px] bg-white border-2 border-primary/20 p-2 shadow-2xl shadow-primary/15 transition-transform duration-500 group-hover:scale-105">
-            <div className="w-full h-full rounded-[38px] overflow-hidden bg-zinc-50 border border-zinc-100">
+          <div className="w-32 h-32 rounded-[48px] bg-white border-2 border-primary/20 p-2 shadow-2xl shadow-primary/15">
+            <div className="w-full h-full rounded-[38px] overflow-hidden bg-zinc-50 border border-zinc-100 relative">
               <img src={avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
+              <button className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                 <Camera className="w-6 h-6 text-white" />
+              </button>
             </div>
           </div>
           <div className={cn(
@@ -44,24 +85,56 @@ export default function Profile() {
           </div>
         </motion.div>
 
-        <div className="text-center space-y-1 px-6">
-          <input 
-            type="text" 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full bg-transparent border-none text-center text-3xl font-black tracking-tight text-zinc-900 leading-none lowercase focus:ring-0"
-          />
-          <div className={cn(
-            "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border transition-all mt-3",
-            isVip 
-              ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-600" 
-              : "bg-zinc-100 border-zinc-200 text-zinc-400"
-          )}>
-            {isVip ? <ShieldCheck className="w-3.5 h-3.5 text-yellow-500" /> : <Lock className="w-3 h-3" />}
-            <span className="text-[10px] font-black uppercase tracking-widest lowercase">
-              {isVip ? 'Global VIP Member' : 'Standard Member'}
-            </span>
-          </div>
+        <div className="text-center space-y-1 px-6 w-full max-w-[280px]">
+          {isEditing ? (
+            <div className="space-y-4">
+               <input 
+                 type="text" 
+                 value={editedProfile.displayName}
+                 onChange={(e) => setEditedProfile({...editedProfile, displayName: e.target.value})}
+                 className="w-full bg-zinc-100 border border-zinc-200 rounded-2xl px-4 py-3 text-center text-lg font-black tracking-tight text-zinc-900 leading-none lowercase focus:ring-2 focus:ring-primary/20 outline-none"
+                 placeholder="Your display name"
+               />
+               <input 
+                 type="text" 
+                 value={editedProfile.phoneNumber}
+                 onChange={(e) => setEditedProfile({...editedProfile, phoneNumber: e.target.value})}
+                 className="w-full bg-zinc-100 border border-zinc-200 rounded-2xl px-4 py-3 text-center text-sm font-black tracking-tight text-zinc-900 leading-none focus:ring-2 focus:ring-primary/20 outline-none"
+                 placeholder="+256 7xx xxxxxx"
+               />
+               <div className="flex gap-2">
+                 <button onClick={handleSave} disabled={isSaving} className="flex-1 py-3 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Save
+                 </button>
+                 <button onClick={() => setIsEditing(false)} className="flex-1 py-3 bg-zinc-100 text-zinc-400 rounded-2xl font-black text-[10px] uppercase tracking-widest">
+                    Cancel
+                 </button>
+               </div>
+            </div>
+          ) : (
+            <>
+               <h3 className="text-3xl font-black tracking-tight text-zinc-900 leading-none lowercase">{profile.displayName}</h3>
+               <p className="text-zinc-400 text-xs font-bold">{profile.email}</p>
+               <div className={cn(
+                 "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border transition-all mt-3",
+                 isVip 
+                   ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-600" 
+                   : "bg-zinc-100 border-zinc-200 text-zinc-400"
+               )}>
+                 {isVip ? <ShieldCheck className="w-3.5 h-3.5 text-yellow-500" /> : <Lock className="w-3 h-3" />}
+                 <span className="text-[10px] font-black uppercase tracking-widest lowercase">
+                   {isVip ? 'Global VIP Member' : 'Standard Member'}
+                 </span>
+               </div>
+               <button 
+                 onClick={() => setIsEditing(true)}
+                 className="mt-4 text-[10px] font-black text-primary uppercase tracking-widest hover:underline underline-offset-4"
+               >
+                 Edit my identity
+               </button>
+            </>
+          )}
         </div>
       </section>
 
@@ -88,31 +161,12 @@ export default function Profile() {
                <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] lowercase">Subscription valid until</p>
                <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-yellow-500" />
-                  <span className="text-xl font-black tabular-nums">{premiumExpiry || '2026-05-26'}</span>
+                  <span className="text-xl font-black tabular-nums">{profile.subscriptionExpiry || 'End of Time'}</span>
                </div>
             </div>
           </div>
         </motion.div>
       )}
-
-      {/* Verification Toggle (Test) */}
-      <section className="px-4">
-        <div className="bg-[var(--muted)] border border-primary/10 rounded-[32px] p-4 flex items-center justify-between">
-          <div className="pl-2">
-            <h4 className="text-[10px] font-black text-[var(--foreground)] uppercase tracking-widest lowercase">Simulate VIP</h4>
-            <p className="text-[9px] font-bold text-[var(--muted-foreground)] lowercase">For testing layout</p>
-          </div>
-          <button 
-            onClick={() => setIsVip(!isVip)}
-            className={cn(
-              "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm",
-              isVip ? "bg-lose text-white" : "bg-win text-white"
-            )}
-          >
-            {isVip ? 'Deactivate' : 'Activate'}
-          </button>
-        </div>
-      </section>
 
       {/* Settings Grid */}
       <section className="px-4 grid grid-cols-2 gap-3">
@@ -121,8 +175,8 @@ export default function Profile() {
               <Star className="w-5 h-5 text-yellow-500" />
            </div>
            <div>
-              <p className="text-[var(--muted-foreground)] text-[10px] font-black uppercase tracking-widest lowercase">Account Rating</p>
-              <h4 className="text-xl font-black text-[var(--foreground)]">4.9/5</h4>
+              <p className="text-[var(--muted-foreground)] text-[10px] font-black uppercase tracking-widest lowercase">Rating</p>
+              <h4 className="text-xl font-black text-[var(--foreground)]">4.9</h4>
            </div>
         </div>
         <div className="bg-[var(--card)] border border-[var(--border)] p-5 rounded-[32px] shadow-sm space-y-3">
@@ -130,8 +184,8 @@ export default function Profile() {
               <Zap className="w-5 h-5 text-primary" />
            </div>
            <div>
-              <p className="text-[var(--muted-foreground)] text-[10px] font-black uppercase tracking-widest lowercase">Active Tips</p>
-              <h4 className="text-xl font-black text-[var(--foreground)]">12</h4>
+              <p className="text-[var(--muted-foreground)] text-[10px] font-black uppercase tracking-widest lowercase">Tier</p>
+              <h4 className="text-xl font-black text-[var(--foreground)] lowercase">{profile.subscriptionTier}</h4>
            </div>
         </div>
       </section>
@@ -140,16 +194,16 @@ export default function Profile() {
       <section className="mx-4 bg-[var(--card)] border border-[var(--border)] rounded-[36px] overflow-hidden shadow-sm">
         <div className="divide-y divide-[var(--border)]/50">
           {[
-            { label: 'Login ID', value: phoneNumber || '+256 701 000 000', icon: Phone },
-            { label: 'Access Tier', value: isVip ? 'Global Premium' : 'Free User', icon: ShieldCheck },
-            { label: 'Join Date', value: '2026-04-26', icon: Calendar },
+            { label: 'Login Identity', value: profile.email, icon: Mail },
+            { label: 'Contact Secret', value: profile.phoneNumber || 'not set', icon: Phone },
+            { label: 'Joined Matrix', value: profile.createdAt ? format(new Date(profile.createdAt), 'MMM yyyy') : 'Recently', icon: Calendar },
           ].map((item, i) => (
             <div key={i} className="flex items-center justify-between p-6 hover:bg-[var(--muted)]/30 transition-colors">
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest lowercase">{item.label}</p>
                 <div className="flex items-center gap-2">
                   <item.icon className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-sm font-black text-[var(--foreground)] lowercase">{item.value}</span>
+                  <span className="text-sm font-black text-[var(--foreground)] lowercase truncate max-w-[200px]">{item.value}</span>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-[var(--border)]" />
@@ -160,9 +214,12 @@ export default function Profile() {
 
       {/* Logout */}
       <div className="px-4">
-        <button className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--muted)] rounded-[32px] text-[var(--foreground)] font-black uppercase tracking-[0.2em] text-[10px] hover:bg-[var(--border)] transition-colors lowercase">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--muted)] rounded-[32px] text-[var(--foreground)] font-black uppercase tracking-[0.2em] text-[10px] hover:bg-zinc-900 hover:text-white transition-all lowercase"
+        >
           <LogOut className="w-4 h-4" />
-          logout of system
+          logout of matrix
         </button>
       </div>
     </div>

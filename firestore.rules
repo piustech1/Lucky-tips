@@ -1,43 +1,110 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny catch-all
+    // 0. Default Deny
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Helper functions
-    function isSignedIn() { return request.auth != null; }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
 
-    // Predictions: Publicly readable for the purpose of the applet
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidPrediction(data) {
+      return data.keys().hasAll(['date', 'time', 'league', 'homeTeam', 'awayTeam', 'tip', 'odds', 'category', 'status', 'isVip', 'createdAt'])
+        && data.date is string
+        && data.time is string
+        && data.league is string && data.league.size() <= 100
+        && data.homeTeam is string && data.homeTeam.size() <= 100
+        && data.awayTeam is string && data.awayTeam.size() <= 100
+        && data.tip is string && data.tip.size() <= 200
+        && data.odds is string && data.odds.size() <= 10
+        && data.category in ['free', 'vip', '1x', 'x2', 'bts', 'over25', 'under25']
+        && data.status in ['won', 'lost', 'pending']
+        && data.isVip is bool
+        && data.createdAt == request.time;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'subscriptionTier', 'isAdmin', 'createdAt'])
+        && data.uid == request.auth.uid
+        && data.email == request.auth.token.email
+        && data.subscriptionTier in ['free', 'vip']
+        && data.isAdmin is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['title', 'message', 'timestamp', 'type', 'target'])
+        && data.title is string && data.title.size() <= 200
+        && data.message is string && data.message.size() <= 1000
+        && data.timestamp == request.time
+        && data.type in ['info', 'success', 'alert']
+        && data.target in ['all', 'vip'];
+    }
+
+    // --- Collection Rules ---
+
     match /predictions/{predictionId} {
-      allow read: if true; 
-      allow write: if false; 
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidPrediction(incoming());
+      allow update: if (isAdmin() || (isSignedIn() && false)) // Admins only for now
+        && isValidPrediction(incoming());
+      allow delete: if isAdmin();
     }
 
-    // Notifications: Publicly readable
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().isAdmin == false;
+      allow update: if isOwner(userId) 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phone', 'photoURL'])
+        && existing().uid == incoming().uid; // Basic profile update
+      allow delete: if isAdmin();
+    }
+
     match /notifications/{notificationId} {
-      allow read: if true;
-      allow write: if false;
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
-    // Feedback: Publicly writable with validation
-    match /feedback/{feedbackId} {
-      allow create: if isValidId(feedbackId) 
-        && incoming().name is string && incoming().name.size() <= 100
-        && incoming().email is string && incoming().email.matches('^.+@.+$')
-        && incoming().message is string && incoming().message.size() <= 5000
-        && incoming().createdAt == request.time;
-      allow read: if false; 
+    match /transactions/{transactionId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isAdmin();
     }
 
-    // Global Stats: Publicly readable
-    match /stats/{statId} {
-      allow read: if true;
-      allow write: if false;
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false; // System only
     }
   }
 }

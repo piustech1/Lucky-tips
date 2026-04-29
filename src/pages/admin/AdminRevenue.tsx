@@ -3,7 +3,7 @@ import {
   DollarSign, ArrowUpRight, TrendingUp, 
   Download, Filter, Calendar, 
   CreditCard, Wallet, Smartphone,
-  BarChart3, PieChart
+  BarChart3, PieChart, Coins
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -13,16 +13,18 @@ import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
 
 const data = [
-  { name: 'Mon', revenue: 400, subscriptions: 12 },
-  { name: 'Tue', revenue: 300, subscriptions: 8 },
-  { name: 'Wed', revenue: 600, subscriptions: 18 },
-  { name: 'Thu', revenue: 400, subscriptions: 15 },
-  { name: 'Fri', revenue: 700, subscriptions: 22 },
-  { name: 'Sat', revenue: 900, subscriptions: 30 },
-  { name: 'Sun', revenue: 1200, subscriptions: 42 },
+  { name: 'Mon', revenue: 420000, subscriptions: 12 },
+  { name: 'Tue', revenue: 310000, subscriptions: 8 },
+  { name: 'Wed', revenue: 680000, subscriptions: 18 },
+  { name: 'Thu', revenue: 450000, subscriptions: 15 },
+  { name: 'Fri', revenue: 720000, subscriptions: 22 },
+  { name: 'Sat', revenue: 1250000, subscriptions: 30 },
+  { name: 'Sun', revenue: 1840000, subscriptions: 42 },
 ];
 
 export default function AdminRevenue() {
+  const totalRevenue = data.reduce((acc, curr) => acc + curr.revenue, 0);
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Top Banner Stats */}
@@ -31,43 +33,45 @@ export default function AdminRevenue() {
            <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/10 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full" />
            <div className="flex items-center justify-between relative z-10">
               <div className="space-y-1">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Total Gross Revenue</p>
-                 <h2 className="text-6xl font-black italic tracking-tighter">$42,852.00</h2>
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Matrix Gross Revenue</p>
+                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-black italic tracking-tighter">
+                   {totalRevenue.toLocaleString()} <span className="text-2xl opacity-50 not-italic">UGX</span>
+                 </h2>
               </div>
               <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-[24px] flex items-center justify-center">
-                 <DollarSign className="w-8 h-8" />
+                 <Coins className="w-8 h-8" />
               </div>
            </div>
            
            <div className="flex items-center gap-8 relative z-10">
               <div className="space-y-1">
-                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">This month</p>
-                 <p className="text-xl font-black">+$5,248.50</p>
+                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Weekly Pulse</p>
+                 <p className="text-xl font-black">+{Math.round(totalRevenue / 7).toLocaleString()} UGX / day</p>
               </div>
               <div className="h-10 w-[2px] bg-white/20" />
               <div className="space-y-1">
-                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Pending</p>
-                 <p className="text-xl font-black text-amber-300">$1,421.00</p>
+                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Market Accuracy</p>
+                 <p className="text-xl font-black text-win">94% Stability</p>
               </div>
            </div>
         </div>
 
         <div className="p-10 bg-white border border-[#E9ECEF] rounded-[48px] flex flex-col justify-between">
            <div>
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lowercase">Popular Method</p>
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lowercase">Market Channel</p>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center">
-                   <Smartphone className="w-7 h-7 text-indigo-500" />
+                <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center">
+                   <Smartphone className="w-7 h-7 text-amber-500" />
                 </div>
                 <div>
-                   <h4 className="text-lg font-black lowercase tracking-tight">Mobile Money</h4>
-                   <p className="text-[11px] font-black text-zinc-400">72% of total volume</p>
+                   <h4 className="text-lg font-black lowercase tracking-tight">MTN/Airtel</h4>
+                   <p className="text-[11px] font-black text-zinc-400">88% Mobile Volume</p>
                 </div>
               </div>
            </div>
            <button className="w-full h-16 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-[#F1F3F5] transition-all flex items-center justify-center gap-2">
               <Download className="w-4 h-4 text-zinc-400" />
-              Export Financials.csv
+              download intel.csv
            </button>
         </div>
       </div>
@@ -76,8 +80,8 @@ export default function AdminRevenue() {
       <div className="p-10 bg-white border border-[#E9ECEF] rounded-[48px] space-y-10">
          <div className="flex items-center justify-between">
             <div>
-               <h3 className="text-2xl font-black italic lowercase tracking-tight leading-none">Daily Income Streams</h3>
-               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase mt-1">performance overview for current week</p>
+               <h3 className="text-2xl font-black italic lowercase tracking-tight leading-none">Market Growth Intel</h3>
+               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase mt-1">revenue snapshots in UGX (weekly)</p>
             </div>
             <BarChart3 className="w-8 h-8 text-zinc-200" />
          </div>
@@ -87,10 +91,16 @@ export default function AdminRevenue() {
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F3F5" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#ADB5BD', fontWeight: 'bold' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#ADB5BD', fontWeight: 'bold' }} />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#ADB5BD', fontWeight: 'bold' }}
+                  tickFormatter={(value) => `${(value / 1000).toLocaleString()}k`}
+                />
                 <Tooltip 
                   cursor={{ fill: '#F8F9FA' }}
                   contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}
+                  formatter={(value: number) => [`${value.toLocaleString()} UGX`, 'Revenue']}
                 />
                 <Bar dataKey="revenue" fill="#00BFA6" radius={[12, 12, 0, 0]} barSize={40} />
               </BarChart>
@@ -100,9 +110,9 @@ export default function AdminRevenue() {
 
       {/* Payment methods breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-         <MethodCard icon={Smartphone} label="Mobile Money" volume="$31,042" color="text-indigo-500" bg="bg-indigo-500/10" />
-         <MethodCard icon={CreditCard} label="Credit Cards" volume="$8,421" color="text-blue-500" bg="bg-blue-500/10" />
-         <MethodCard icon={Wallet} label="Crypto Support" volume="$3,389" color="text-amber-500" bg="bg-amber-500/10" />
+         <MethodCard icon={Smartphone} label="Direct Mobile" volume="15.4M UGX" color="text-amber-500" bg="bg-amber-500/10" />
+         <MethodCard icon={CreditCard} label="Bank Transfers" volume="4.2M UGX" color="text-blue-500" bg="bg-blue-500/10" />
+         <MethodCard icon={Wallet} label="Digital Wallet" volume="2.1M UGX" color="text-primary" bg="bg-primary/10" />
       </div>
     </div>
   );

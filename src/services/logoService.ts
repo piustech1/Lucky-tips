@@ -1,46 +1,26 @@
-const cache: Record<string, string> = JSON.parse(localStorage.getItem('sports_logos_cache') || '{}');
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-function saveCache() {
-  localStorage.setItem('sports_logos_cache', JSON.stringify(cache));
-}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-export async function getTeamLogo(teamName: string): Promise<string | null> {
-  const cacheKey = `team_${teamName.toLowerCase()}`;
-  if (cache[cacheKey]) return cache[cacheKey];
-
+export async function findTeamLogo(teamName: string): Promise<string> {
+  if (!teamName) return "";
+  
   try {
-    // Try by name first (more accurate for specific teams)
-    let response = await fetch(`/api/proxy/sports?endpoint=teams&name=${encodeURIComponent(teamName)}`);
+    const prompt = `Find the official high-resolution transparent PNG logo URL for the football team "${teamName}". 
+    Prefer logos from trusted sources like media.api-sports.io, wikimedia, or official club sites. 
+    Return ONLY the direct image URL string. If not found, return empty string.`;
     
-    if (response.status === 429) {
-      console.warn('Sports API rate limit reached (429).');
-      return null;
-    }
+    const result = await model.generateContent(prompt);
+    const url = result.response.text().trim();
     
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    let data = await response.json();
-
-    if (!data.response || data.response.length === 0) {
-      // Fallback to search
-      response = await fetch(`/api/proxy/sports?endpoint=teams&search=${encodeURIComponent(teamName)}`);
-      
-      if (response.status === 429) return null;
-      if (!response.ok) throw new Error(`API Search Error: ${response.status}`);
-      data = await response.json();
+    // Simple validation
+    if (url.startsWith('http')) {
+      return url;
     }
-
-    if (data.response && data.response.length > 0) {
-      // Try to find exact match or just take the first one
-      const match = data.response.find((r: any) => r.team.name.toLowerCase() === teamName.toLowerCase()) || data.response[0];
-      const logoUrl = match.team.logo;
-      cache[cacheKey] = logoUrl;
-      saveCache();
-      return logoUrl;
-    }
-
-    return null;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName)}&background=random&color=fff`;
   } catch (error) {
-    console.error('Error fetching team logo:', error);
-    return null;
+    console.error("Error finding logo:", error);
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName)}&background=random&color=fff`;
   }
 }

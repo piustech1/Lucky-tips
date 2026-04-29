@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Trophy, Plus, Search, Filter, 
   Trash2, Edit2, Clock, Globe, 
   TrendingUp, CheckCircle2, XCircle, 
   ChevronRight, LayoutGrid, Image as ImageIcon,
-  DollarSign, Hash
+  DollarSign, Hash, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
+import { 
+  ref, 
+  onValue, 
+  push, 
+  remove, 
+  update, 
+  query, 
+  orderByChild,
+  serverTimestamp 
+} from 'firebase/database';
+import { rtdb } from '../../lib/firebase';
+import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
+import { findTeamLogo } from '../../services/logoService';
 
 const CATEGORIES = [
   { id: 'free', label: 'Free Tips' },
@@ -20,43 +33,118 @@ const CATEGORIES = [
   { id: 'under25', label: 'Under 2.5 Market' }
 ];
 
-const MOCK_TIPS = [
-  {
-    id: '1',
-    homeTeam: 'Arsenal',
-    awayTeam: 'Man City',
-    homeLogo: 'https://media.api-sports.io/football/teams/42.png',
-    awayLogo: 'https://media.api-sports.io/football/teams/50.png',
-    league: 'Premier League',
-    category: 'over25',
-    odds: '1.95',
-    tip: 'Over 2.5 Goals',
-    time: '21:00',
-    date: '2024-04-28',
-    status: 'pending',
-    isVip: true
-  },
-  {
-    id: '2',
-    homeTeam: 'Real Madrid',
-    awayTeam: 'Barcelona',
-    homeLogo: 'https://media.api-sports.io/football/teams/541.png',
-    awayLogo: 'https://media.api-sports.io/football/teams/529.png',
-    league: 'La Liga',
-    category: 'bts',
-    odds: '1.80',
-    tip: 'Both Teams Score',
-    time: '22:00',
-    date: '2024-04-28',
-    status: 'won',
-    isVip: false
-  }
-];
-
 export default function AdminTips() {
-  const [tips, setTips] = useState(MOCK_TIPS);
+  const [tips, setTips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    homeTeam: '',
+    awayTeam: '',
+    homeLogo: '',
+    awayLogo: '',
+    league: '',
+    leagueLogo: '',
+    category: 'free',
+    odds: '',
+    tip: '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    time: '20:00',
+    isVip: false,
+    status: 'pending'
+  });
+
+  const [logoLoading, setLogoLoading] = useState({ home: false, away: false });
+
+  useEffect(() => {
+    const predictionsRef = ref(rtdb, 'predictions');
+    const q = query(predictionsRef, orderByChild('createdAt'));
+    
+    const unsubscribe = onValue(q, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // RTDB returns an object, so we convert it to an array and sort manually because RTDB sorting is limited
+        const tipsList = Object.entries(data).map(([id, val]: [string, any]) => ({
+          id,
+          ...val
+        })).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        
+        setTips(tipsList);
+      } else {
+        setTips([]);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error('RTDB List Error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogoFetch = async (type: 'home' | 'away', name: string) => {
+    if (!name) return;
+    setLogoLoading(prev => ({ ...prev, [type]: true }));
+    const logo = await findTeamLogo(name);
+    setFormData(prev => ({ ...prev, [`${type}Logo`]: logo }));
+    setLogoLoading(prev => ({ ...prev, [type]: false }));
+  };
+
+  const handleAddTip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const predictionsRef = ref(rtdb, 'predictions');
+      await push(predictionsRef, {
+        ...formData,
+        createdAt: serverTimestamp(),
+        isVip: formData.category === 'vip' || formData.isVip
+      });
+      setIsAdding(false);
+      setFormData({
+        homeTeam: '',
+        awayTeam: '',
+        homeLogo: '',
+        awayLogo: '',
+        league: '',
+        leagueLogo: '',
+        category: 'free',
+        odds: '',
+        tip: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        time: '20:00',
+        isVip: false,
+        status: 'pending'
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'predictions');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      const tipRef = ref(rtdb, `predictions/${id}`);
+      await update(tipRef, { status });
+    } catch (error) {
+      console.error('RTDB Update Error:', error);
+    }
+  };
+
+  const deleteTip = async (id: string) => {
+    if (!window.confirm('Delete this tip permanently?')) return;
+    try {
+      const tipRef = ref(rtdb, `predictions/${id}`);
+      await remove(tipRef);
+    } catch (error) {
+      console.error('RTDB Delete Error:', error);
+    }
+  };
+
+  const filteredTips = filter === 'all' ? tips : tips.filter(t => t.category === filter);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -135,38 +223,107 @@ export default function AdminTips() {
                  </button>
               </div>
 
-              <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); setIsAdding(false); }}>
+              <form className="space-y-8" onSubmit={handleAddTip}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <AdminInput label="Home Team" placeholder="Arsenal" />
-                   <AdminInput label="Away Team" placeholder="Man City" />
-                   <AdminInput label="League" placeholder="Premier League" />
+                   <div className="space-y-2">
+                     <AdminInput 
+                       label="Home Team" 
+                       placeholder="Arsenal" 
+                       value={formData.homeTeam} 
+                       onChange={(e: any) => setFormData({...formData, homeTeam: e.target.value})}
+                       onBlur={() => handleLogoFetch('home', formData.homeTeam)}
+                     />
+                     {logoLoading.home && <p className="text-[8px] font-bold text-primary animate-pulse ml-2">searching logo...</p>}
+                   </div>
+                   <div className="space-y-2">
+                     <AdminInput 
+                       label="Away Team" 
+                       placeholder="Man City" 
+                       value={formData.awayTeam}
+                       onChange={(e: any) => setFormData({...formData, awayTeam: e.target.value})}
+                       onBlur={() => handleLogoFetch('away', formData.awayTeam)}
+                     />
+                     {logoLoading.away && <p className="text-[8px] font-bold text-primary animate-pulse ml-2">searching logo...</p>}
+                   </div>
+                   
+                   <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-center gap-4">
+                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2 shadow-sm">
+                            {formData.homeLogo ? <img src={formData.homeLogo} className="w-full h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-zinc-300" />}
+                         </div>
+                         <p className="text-[10px] font-black text-zinc-400 uppercase">Home Logo Extracted</p>
+                      </div>
+                      <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-center gap-4">
+                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2 shadow-sm">
+                            {formData.awayLogo ? <img src={formData.awayLogo} className="w-full h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-zinc-300" />}
+                         </div>
+                         <p className="text-[10px] font-black text-zinc-400 uppercase">Away Logo Extracted</p>
+                      </div>
+                   </div>
+
+                   <AdminInput 
+                     label="League" 
+                     placeholder="Premier League" 
+                     value={formData.league}
+                     onChange={(e: any) => setFormData({...formData, league: e.target.value})}
+                   />
                    <div className="space-y-2">
                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Market Category</label>
-                     <select className="w-full h-14 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl px-4 text-sm font-black lowercase tracking-tight outline-none focus:ring-2 focus:ring-primary/20">
+                     <select 
+                       value={formData.category}
+                       onChange={(e) => setFormData({...formData, category: e.target.value})}
+                       className="w-full h-14 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl px-4 text-sm font-black lowercase tracking-tight outline-none focus:ring-2 focus:ring-primary/20"
+                     >
                         {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                      </select>
                    </div>
-                   <AdminInput label="Odds" placeholder="1.95" icon={TrendingUp} />
-                   <AdminInput label="Tip / Selection" placeholder="Over 2.5 Goals" icon={CheckCircle2} />
-                   <AdminInput label="Match Date" type="date" icon={Clock} />
-                   <AdminInput label="Match Time" type="time" icon={Clock} />
+                   <AdminInput 
+                     label="Odds" 
+                     placeholder="1.95" 
+                     icon={TrendingUp} 
+                     value={formData.odds}
+                     onChange={(e: any) => setFormData({...formData, odds: e.target.value})}
+                   />
+                   <AdminInput 
+                     label="Tip / Selection" 
+                     placeholder="Over 2.5 Goals" 
+                     icon={CheckCircle2} 
+                     value={formData.tip}
+                     onChange={(e: any) => setFormData({...formData, tip: e.target.value})}
+                   />
+                   <AdminInput 
+                     label="Match Date" 
+                     type="date" 
+                     icon={Clock} 
+                     value={formData.date}
+                     onChange={(e: any) => setFormData({...formData, date: e.target.value})}
+                   />
+                   <AdminInput 
+                     label="Match Time" 
+                     type="time" 
+                     icon={Clock} 
+                     value={formData.time}
+                     onChange={(e: any) => setFormData({...formData, time: e.target.value})}
+                   />
                 </div>
 
                 <div className="flex items-center gap-6 p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <input type="checkbox" className="w-5 h-5 rounded-lg accent-primary" />
+                      <input 
+                        type="checkbox" 
+                        className="w-5 h-5 rounded-lg accent-primary" 
+                        checked={formData.isVip}
+                        onChange={(e) => setFormData({...formData, isVip: e.target.checked})}
+                      />
                       <span className="text-xs font-black lowercase tracking-tight">Highlight as VIP Tip</span>
-                   </label>
-                   <label className="flex items-center gap-3 cursor-pointer group">
-                      <input type="checkbox" className="w-5 h-5 rounded-lg accent-primary" />
-                      <span className="text-xs font-black lowercase tracking-tight">Post to Public Channel</span>
                    </label>
                 </div>
 
                 <button 
-                  className="w-full h-16 bg-premium-gradient text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-98 transition-all flex items-center justify-center gap-3 mt-6"
+                  disabled={isSubmitting}
+                  className="w-full h-16 bg-premium-gradient text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-98 transition-all flex items-center justify-center gap-3 mt-6 disabled:opacity-50"
                 >
-                  <Plus className="w-5 h-5" />
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
                   finalize and distribute
                 </button>
               </form>
@@ -177,19 +334,30 @@ export default function AdminTips() {
 
       {/* Tips List */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-10">
-         {tips.map((tip) => (
+         {loading ? (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-300 gap-4">
+               <Loader2 className="w-10 h-10 animate-spin" />
+               <p className="text-xs font-black uppercase tracking-widest">syncing with matrix...</p>
+            </div>
+         ) : filteredTips.length === 0 ? (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-300 gap-4">
+               <Trophy className="w-12 h-12 opacity-20" />
+               <p className="text-xs font-black uppercase tracking-widest">no tips found in this sector</p>
+            </div>
+         ) : filteredTips.map((tip) => (
            <motion.div 
              key={tip.id}
+             layout
              className="p-8 bg-white border border-[#E9ECEF] rounded-[40px] hover:shadow-2xl transition-all group"
            >
               <div className="flex items-center justify-between mb-8">
                  <div className="flex items-center gap-4">
                     <div className="flex -space-x-4">
                        <div className="w-12 h-12 bg-[#F8F9FA] rounded-2xl border-4 border-white flex items-center justify-center p-2">
-                          <img src={tip.homeLogo} alt={tip.homeTeam} className="w-full h-full object-contain" />
+                          <img src={tip.homeLogo || 'https://via.placeholder.com/150'} alt={tip.homeTeam} className="w-full h-full object-contain" />
                        </div>
                        <div className="w-12 h-12 bg-[#F8F9FA] rounded-2xl border-4 border-white flex items-center justify-center p-2">
-                          <img src={tip.awayLogo} alt={tip.awayTeam} className="w-full h-full object-contain" />
+                          <img src={tip.awayLogo || 'https://via.placeholder.com/150'} alt={tip.awayTeam} className="w-full h-full object-contain" />
                        </div>
                     </div>
                     <div>
@@ -224,21 +392,41 @@ export default function AdminTips() {
               </div>
 
               <div className="flex items-center gap-4">
-                 <button className="flex-1 h-12 bg-[#F1F3F5] rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-[#E9ECEF] transition-all flex items-center justify-center gap-2 text-zinc-600">
-                    <Edit2 className="w-3.5 h-3.5" />
-                    Edit Tip
-                 </button>
-                 <div className="flex items-center gap-2">
-                    <button className="h-12 w-12 bg-win/10 text-win rounded-2xl flex items-center justify-center hover:bg-win hover:text-white transition-all">
+                 <div className="flex-1 flex items-center gap-2">
+                    <button 
+                      onClick={() => updateStatus(tip.id, 'won')}
+                      className={cn(
+                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-all",
+                        tip.status === 'won' ? "bg-win text-white shadow-lg shadow-win/20" : "bg-win/10 text-win hover:bg-win hover:text-white"
+                      )}
+                    >
                        <CheckCircle2 className="w-5 h-5" />
                     </button>
-                    <button className="h-12 w-12 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
+                    <button 
+                      onClick={() => updateStatus(tip.id, 'lost')}
+                      className={cn(
+                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-all",
+                        tip.status === 'lost' ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-red-100 text-red-500 hover:bg-red-500 hover:text-white"
+                      )}
+                    >
                        <XCircle className="w-5 h-5" />
                     </button>
-                    <button className="h-12 w-12 bg-zinc-100 text-zinc-400 rounded-2xl flex items-center justify-center hover:bg-zinc-900 hover:text-white transition-all">
-                       <Trash2 className="w-5 h-5" />
+                    <button 
+                      onClick={() => updateStatus(tip.id, 'pending')}
+                      className={cn(
+                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-all",
+                        tip.status === 'pending' ? "bg-zinc-900 text-white shadow-lg shadow-black/20" : "bg-zinc-100 text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                      )}
+                    >
+                       <Clock className="w-5 h-5" />
                     </button>
                  </div>
+                 <button 
+                   onClick={() => deleteTip(tip.id)}
+                   className="h-12 w-12 bg-red-50 text-red-300 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                 >
+                    <Trash2 className="w-5 h-5" />
+                 </button>
               </div>
            </motion.div>
          ))}
@@ -247,7 +435,7 @@ export default function AdminTips() {
   );
 }
 
-function AdminInput({ label, icon: Icon, ...props }: any) {
+function AdminInput({ label, icon: Icon, onBlur, ...props }: any) {
   return (
     <div className="space-y-2 group">
       <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">{label}</label>
@@ -255,6 +443,7 @@ function AdminInput({ label, icon: Icon, ...props }: any) {
         {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-primary transition-colors" />}
         <input 
           {...props}
+          onBlur={onBlur}
           className={cn(
             "w-full h-14 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl px-6 text-sm font-black placeholder:text-zinc-200 outline-none focus:ring-2 focus:ring-primary/20 transition-all",
             Icon && "pl-12"

@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, Send, CheckCircle2, ChevronDown, User, Mail } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Feedback as FeedbackType } from '../types';
-import { db, handleFirestoreError } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { rtdb } from '../lib/firebase';
+import { ref, push, serverTimestamp } from 'firebase/database';
 
 export default function Feedback() {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -18,7 +18,8 @@ export default function Feedback() {
     setIsLoading(true);
     
     try {
-      await addDoc(collection(db, 'feedback'), {
+      const feedbackRef = ref(rtdb, 'feedback');
+      await push(feedbackRef, {
         ...formData,
         createdAt: serverTimestamp()
       });
@@ -26,7 +27,6 @@ export default function Feedback() {
       setIsSubmitted(true);
     } catch (error) {
       console.error("Feedback error:", error);
-      handleFirestoreError(error, 'create', 'feedback');
     }
   };
 

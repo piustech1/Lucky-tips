@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Prediction } from '../types';
-import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { rtdb } from '../lib/firebase';
+import { ref, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 import PredictionCard from '../components/PredictionCard';
 import { CATEGORIES } from '../constants';
-import { MOCK_PREDICTIONS } from '../lib/mockData';
-import { AlertTriangle, MessageSquare, X } from 'lucide-react';
-
+import { AlertTriangle, MessageSquare, Loader2, Trophy } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Home() {
@@ -17,7 +14,6 @@ export default function Home() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWarning, setShowWarning] = useState(false);
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
     // Check if user has seen the warning in this session
@@ -36,33 +32,35 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const q = query(collection(db, 'predictions'), orderBy('date', 'desc'), limit(15));
+    const predictionsRef = ref(rtdb, 'predictions');
+    const q = query(predictionsRef, orderByChild('createdAt'), limitToLast(30));
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Prediction));
-      if (data.length > 0) {
-        setPredictions(data);
+    const unsubscribe = onValue(q, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const tipsData = Object.entries(data).map(([id, val]: [string, any]) => ({
+          id,
+          ...val
+        } as Prediction)).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        setPredictions(tipsData);
       } else {
-        // Fallback: show mock data but try to find those matching today or just the latest
-        const todayTips = MOCK_PREDICTIONS.filter(p => p.date === todayStr);
-        setPredictions(todayTips.length > 0 ? todayTips : MOCK_PREDICTIONS.slice(0, 5));
+        setPredictions([]);
       }
       setLoading(false);
     }, (error) => {
-      console.error("Firestore error:", error);
-      setPredictions(MOCK_PREDICTIONS.slice(0, 5));
+      console.error("RTDB error:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [todayStr]);
+  }, []);
 
   return (
     <div className="space-y-8 pb-10">
       {/* Hot Categories Horizontal Scroll */}
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
-          <h3 className="font-black text-[12px] text-zinc-400 uppercase tracking-[0.2em] lowercase">Hot categories</h3>
+          <h3 className="font-black text-[12px] text-zinc-400 uppercase tracking-[0.2em] lowercase">Hot markets</h3>
           <button 
             onClick={() => navigate('/sections')}
             className="text-[10px] font-black text-primary uppercase tracking-widest lowercase"
@@ -129,18 +127,23 @@ export default function Home() {
         </div>
 
         <div className="space-y-3">
-          {predictions.map((prediction: Prediction, index: number) => (
-            <PredictionCard key={prediction.id} prediction={prediction} index={index} />
-          ))}
+          {loading ? (
+             <div className="flex flex-col items-center justify-center py-20 gap-3">
+               <Loader2 className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+               <p className="text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em] lowercase">fetching latest tips...</p>
+             </div>
+          ) : predictions.length > 0 ? (
+            predictions.map((prediction: Prediction, index: number) => (
+              <PredictionCard key={prediction.id} prediction={prediction} index={index} />
+            ))
+          ) : (
+            <div className="py-20 text-center space-y-3">
+              <Trophy className="w-12 h-12 text-zinc-200 mx-auto" />
+              <p className="text-zinc-400 font-black text-[10px] uppercase tracking-widest lowercase">no matches active right now</p>
+            </div>
+          )}
         </div>
       </section>
-
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-10 gap-3">
-          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em] lowercase">fetching latest tips...</p>
-        </div>
-      )}
 
       {/* Responsible Gambling Modal */}
       <AnimatePresence>

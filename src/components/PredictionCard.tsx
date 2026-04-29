@@ -5,7 +5,7 @@ import { Prediction } from '../types';
 import { cn } from '../lib/utils';
 import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
-import { getTeamLogo } from '../services/logoService';
+import { findTeamLogo } from '../services/logoService';
 
 interface PredictionCardProps {
   prediction: Prediction;
@@ -18,22 +18,24 @@ const DEFAULT_LOGO = 'https://www.pngrepo.com/png/343015/512/football.png';
 export default function PredictionCard({ prediction, index = 0 }: PredictionCardProps) {
   const { isVip } = useUser();
   const navigate = useNavigate();
-  const [homeLogo, setHomeLogo] = useState<string | null>(null);
-  const [awayLogo, setAwayLogo] = useState<string | null>(null);
+  const [homeLogo, setHomeLogo] = useState<string | null>(prediction.homeLogo || null);
+  const [awayLogo, setAwayLogo] = useState<string | null>(prediction.awayLogo || null);
   
   const isLocked = !isVip && (prediction.isVip || (prediction.category && prediction.category !== 'free'));
 
   useEffect(() => {
     async function loadLogos() {
+      if (homeLogo && awayLogo) return;
+
       const [hLogo, aLogo] = await Promise.all([
-        getTeamLogo(prediction.homeTeam),
-        getTeamLogo(prediction.awayTeam)
+        homeLogo ? Promise.resolve(homeLogo) : findTeamLogo(prediction.homeTeam),
+        awayLogo ? Promise.resolve(awayLogo) : findTeamLogo(prediction.awayTeam)
       ]);
       if (hLogo) setHomeLogo(hLogo);
       if (aLogo) setAwayLogo(aLogo);
     }
     loadLogos();
-  }, [prediction.homeTeam, prediction.awayTeam]);
+  }, [prediction.homeTeam, prediction.awayTeam, homeLogo, awayLogo]);
 
   const getStatusIcon = () => {
     switch(prediction.status) {

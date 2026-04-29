@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, limit, where } from 'firebase/firestore';
+import { rtdb } from '../lib/firebase';
+import { ref, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 import { Prediction } from '../types';
 import { cn } from '../lib/utils';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -27,47 +27,56 @@ export default function Sections() {
     }
 
     setLoading(true);
-    let q;
-    if (activeCategory === 'all') {
-      q = query(collection(db, 'predictions'), orderBy('date', 'desc'), limit(100));
-    } else if (activeCategory === 'vip') {
-      q = query(collection(db, 'predictions'), where('isVip', '==', true), orderBy('date', 'desc'), limit(100));
-    } else if (activeCategory === 'free') {
-      q = query(collection(db, 'predictions'), where('category', '==', 'free'), orderBy('date', 'desc'), limit(100));
-    } else {
-      q = query(collection(db, 'predictions'), where('category', '==', activeCategory), orderBy('date', 'desc'), limit(100));
-    }
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Prediction));
+    const predictionsRef = ref(rtdb, 'predictions');
+    const q = query(predictionsRef, orderByChild('createdAt'), limitToLast(100));
+
+    const unsubscribe = onValue(q, (snapshot) => {
+      const data = snapshot.val();
+      let tips: Prediction[] = [];
       
-      if (data.length === 0) {
-        if (activeCategory === 'all') {
-          data = MOCK_PREDICTIONS;
-        } else if (activeCategory === 'vip') {
-          data = MOCK_PREDICTIONS.filter(p => p.isVip);
+      if (data) {
+        tips = Object.entries(data).map(([id, val]: [string, any]) => ({
+          id,
+          ...val
+        } as Prediction)).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        // Filter on client side
+        if (activeCategory === 'vip') {
+          tips = tips.filter(p => p.isVip);
         } else if (activeCategory === 'free') {
-          data = MOCK_PREDICTIONS.filter(p => p.category === 'free');
-        } else {
-          data = MOCK_PREDICTIONS.filter(p => p.category === activeCategory);
+          tips = tips.filter(p => p.category === 'free');
+        } else if (activeCategory !== 'all') {
+          tips = tips.filter(p => p.category === activeCategory);
         }
       }
 
-      setPredictions(data);
+      if (tips.length === 0) {
+        if (activeCategory === 'all') {
+          tips = MOCK_PREDICTIONS;
+        } else if (activeCategory === 'vip') {
+          tips = MOCK_PREDICTIONS.filter(p => p.isVip);
+        } else if (activeCategory === 'free') {
+          tips = MOCK_PREDICTIONS.filter(p => p.category === 'free');
+        } else {
+          tips = MOCK_PREDICTIONS.filter(p => p.category === activeCategory);
+        }
+      }
+
+      setPredictions(tips);
       setLoading(false);
     }, (error) => {
-      console.error("Firestore error:", error);
-      let data: Prediction[] = [];
+      console.error("RTDB error:", error);
+      let tips: Prediction[] = [];
       if (activeCategory === 'all') {
-        data = MOCK_PREDICTIONS;
+        tips = MOCK_PREDICTIONS;
       } else if (activeCategory === 'vip') {
-        data = MOCK_PREDICTIONS.filter(p => p.isVip);
+        tips = MOCK_PREDICTIONS.filter(p => p.isVip);
       } else if (activeCategory === 'free') {
-        data = MOCK_PREDICTIONS.filter(p => p.category === 'free');
+        tips = MOCK_PREDICTIONS.filter(p => p.category === 'free');
       } else {
-        data = MOCK_PREDICTIONS.filter(p => p.category === activeCategory);
+        tips = MOCK_PREDICTIONS.filter(p => p.category === activeCategory);
       }
-      setPredictions(data);
+      setPredictions(tips);
       setLoading(false);
     });
 

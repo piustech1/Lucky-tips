@@ -2,72 +2,95 @@
   "entities": {
     "Prediction": {
       "title": "Prediction",
-      "description": "A daily match prediction entity",
+      "description": "A match prediction entity with logos and market metadata",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
+        "time": { "type": "string" },
         "league": { "type": "string" },
+        "leagueLogo": { "type": "string" },
         "homeTeam": { "type": "string" },
+        "homeLogo": { "type": "string" },
         "awayTeam": { "type": "string" },
+        "awayLogo": { "type": "string" },
         "tip": { "type": "string" },
         "odds": { "type": "string" },
-        "status": { "type": "string", "enum": ["won", "lost", "pending"] }
+        "category": { "type": "string", "enum": ["free", "vip", "1x", "x2", "bts", "over25", "under25"] },
+        "status": { "type": "string", "enum": ["won", "lost", "pending"] },
+        "isVip": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["date", "league", "homeTeam", "awayTeam", "tip", "odds", "status"]
+      "required": ["date", "time", "league", "homeTeam", "awayTeam", "tip", "odds", "category", "status", "isVip", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and subscription state",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "subscriptionTier": { "type": "string", "enum": ["free", "vip"] },
+        "subscriptionExpiry": { "type": "string", "format": "date-time" },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "subscriptionTier", "isAdmin", "createdAt"]
     },
     "Notification": {
       "title": "Notification",
-      "description": "System alert or news notification",
+      "description": "System broadcast notification",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "title": { "type": "string" },
         "message": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" },
-        "isRead": { "type": "boolean" },
-        "type": { "type": "string", "enum": ["info", "success", "alert"] }
+        "type": { "type": "string", "enum": ["info", "success", "alert"] },
+        "target": { "type": "string", "enum": ["all", "vip"] }
       },
-      "required": ["title", "message", "timestamp", "type"]
+      "required": ["title", "message", "timestamp", "type", "target"]
     },
-    "Feedback": {
-      "title": "Feedback",
-      "description": "User feedback submission",
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Subscription payment record",
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "email": { "type": "string" },
-        "type": { "type": "string", "enum": ["suggestion", "bug", "complaint", "praise"] },
-        "message": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "plan": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "active", "expired"] },
+        "date": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "email", "type", "message", "createdAt"]
+      "required": ["userId", "amount", "currency", "plan", "status", "date"]
     }
   },
   "firestore": {
     "/predictions/{predictionId}": {
       "schema": "Prediction",
-      "description": "Global collection of match tips"
+      "description": "Global collection of curated tips"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Private user profiles"
     },
     "/notifications/{notificationId}": {
       "schema": "Notification",
-      "description": "Global announcements and updates"
+      "description": "Public and targeted alerts"
     },
-    "/feedback/{feedbackId}": {
-      "schema": "Feedback",
-      "description": "User feedback submissions"
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial records"
     },
-    "/stats/global": {
-      "schema": {
-        "type": "object",
-        "properties": {
-          "totalPredictions": { "type": "number" },
-          "wins": { "type": "number" },
-          "losses": { "type": "number" },
-          "accuracy": { "type": "number" }
-        }
-      },
-      "description": "Global performance statistics"
+    "/admins/{userId}": {
+      "schema": { "type": "object", "properties": { "role": { "type": "string" } } },
+      "description": "Trusted admin registry"
     }
   }
 }

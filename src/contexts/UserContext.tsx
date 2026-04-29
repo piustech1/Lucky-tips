@@ -1,60 +1,89 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { ref, onValue, set, update, get } from 'firebase/database';
+import { auth, rtdb } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
+
+interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  phoneNumber: string;
+  photoURL: string;
+  subscriptionTier: 'free' | 'vip';
+  subscriptionExpiry: string | null;
+  isAdmin: boolean;
+  createdAt: number | string;
+}
 
 interface UserContextType {
+  user: FirebaseUser | null;
+  profile: UserProfile | null;
+  loading: boolean;
   isVip: boolean;
-  setIsVip: (value: boolean) => void;
-  phoneNumber: string;
-  setPhoneNumber: (value: string) => void;
-  username: string;
-  setUsername: (value: string) => void;
-  premiumExpiry: string | null;
-  setPremiumExpiry: (value: string | null) => void;
+  isAdmin: boolean;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [isVip, setIsVip] = useState(() => {
-    return localStorage.getItem('lucky_tips_vip') === 'true';
-  });
-  const [phoneNumber, setPhoneNumber] = useState(() => {
-    return localStorage.getItem('lucky_tips_phone') || '';
-  });
-  const [username, setUsername] = useState(() => {
-    return localStorage.getItem('lucky_tips_username') || 'Lucky User';
-  });
-  const [premiumExpiry, setPremiumExpiry] = useState<string | null>(() => {
-    return localStorage.getItem('lucky_tips_expiry');
-  });
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('lucky_tips_vip', isVip.toString());
-  }, [isVip]);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      
+      if (firebaseUser) {
+        // Listen to profile changes in Realtime Database
+        const profileRef = ref(rtdb, `users/${firebaseUser.uid}`);
+        
+        const unsubscribeProfile = onValue(profileRef, (snapshot) => {
+          if (snapshot.exists()) {
+            setProfile(snapshot.val() as UserProfile);
+          } else {
+            console.log('No RTDB profile found for user');
+          }
+          setLoading(false);
+        }, (error) => {
+          console.error('RTDB Profile Error:', error);
+          setLoading(false);
+        });
 
-  useEffect(() => {
-    localStorage.setItem('lucky_tips_phone', phoneNumber);
-  }, [phoneNumber]);
+        return () => unsubscribeProfile();
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
 
-  useEffect(() => {
-    localStorage.setItem('lucky_tips_username', username);
-  }, [username]);
+    return () => unsubscribeAuth();
+  }, []);
 
-  useEffect(() => {
-    if (premiumExpiry) {
-      localStorage.setItem('lucky_tips_expiry', premiumExpiry);
-    } else {
-      localStorage.removeItem('lucky_tips_expiry');
+  const updateProfile = async (data: Partial<UserProfile>) => {
+    if (!user) return;
+    const profileRef = ref(rtdb, `users/${user.uid}`);
+    try {
+      await update(profileRef, { ...data, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error('RTDB Update Error:', error);
     }
-  }, [premiumExpiry]);
+  };
+
+  const value = {
+    user,
+    profile,
+    loading,
+    isVip: profile?.subscriptionTier === 'vip',
+    isAdmin: profile?.isAdmin || false,
+    updateProfile
+  };
 
   return (
-    <UserContext.Provider value={{ 
-      isVip, setIsVip, 
-      phoneNumber, setPhoneNumber,
-      username, setUsername,
-      premiumExpiry, setPremiumExpiry
-    }}>
-      {children}
+    <UserContext.Provider value={value}>
+      {!loading && children}
     </UserContext.Provider>
   );
 }

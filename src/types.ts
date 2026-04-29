@@ -10,9 +10,12 @@ export interface Prediction {
   awayOdds?: string;
   homeFlag?: string;
   awayFlag?: string;
+  homeLogo?: string;
+  awayLogo?: string;
   score?: string;
   isVip?: boolean;
   category?: string;
+  createdAt?: number;
 }
 
 export interface Notification {

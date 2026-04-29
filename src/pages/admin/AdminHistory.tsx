@@ -1,30 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   History, Calendar, Search, 
   CheckCircle2, XCircle, Clock, 
-  Filter, TrendingUp, BarChart, ChevronDown
+  Filter, TrendingUp, BarChart, ChevronDown, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { format, subDays } from 'date-fns';
-
-const MOCK_HISTORY = [
-  { id: '1', date: '2024-04-27', home: 'Man Utd', away: 'Liverpool', tip: 'BTTS Yes', odds: '1.75', status: 'won', category: 'football' },
-  { id: '2', date: '2024-04-27', home: 'Barca', away: 'PSG', tip: 'Home Win', odds: '2.10', status: 'lost', category: 'football' },
-  { id: '3', date: '2024-04-27', home: 'Celtics', away: 'Heat', tip: 'Over 210.5', odds: '1.90', status: 'won', category: 'basketball' },
-  { id: '4', date: '2024-04-26', home: 'Real Madrid', away: 'Bayern', tip: 'Home Win', odds: '1.85', status: 'won', category: 'football' },
-];
+import { rtdb } from '../../lib/firebase';
+import { ref, onValue, query, orderByChild } from 'firebase/database';
+import { Prediction } from '../../types';
 
 export default function AdminHistory() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [filter, setFilter] = useState('all');
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredTips = MOCK_HISTORY.filter(t => t.date === selectedDate);
+  useEffect(() => {
+    setLoading(true);
+    const predictionsRef = ref(rtdb, 'predictions');
+    const q = query(predictionsRef, orderByChild('createdAt'));
+
+    const unsubscribe = onValue(q, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.entries(data).map(([id, val]: [string, any]) => ({
+          id,
+          ...val
+        } as Prediction));
+        
+        // Filter by the date being displayed
+        const filtered = list.filter(p => {
+          if (!p.createdAt) return false;
+          return format(p.createdAt, 'yyyy-MM-dd') === selectedDate;
+        }).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        
+        setPredictions(filtered);
+      } else {
+        setPredictions([]);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error('RTDB Admin History Error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [selectedDate]);
+
   const stats = {
-    total: filteredTips.length,
-    wins: filteredTips.filter(t => t.status === 'won').length,
-    losses: filteredTips.filter(t => t.status === 'lost').length,
-    rate: filteredTips.length > 0 ? Math.round((filteredTips.filter(t => t.status === 'won').length / filteredTips.length) * 100) : 0
+    total: predictions.length,
+    wins: predictions.filter(t => t.status === 'won').length,
+    losses: predictions.filter(t => t.status === 'lost').length,
+    rate: predictions.length > 0 ? Math.round((predictions.filter(t => t.status === 'won').length / predictions.length) * 100) : 0
   };
 
   return (
@@ -85,45 +113,54 @@ export default function AdminHistory() {
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-          <AnimatePresence mode="popLayout">
-            {filteredTips.map((tip, index) => (
-              <motion.div
-                key={tip.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-white p-6 rounded-[32px] border border-[#E9ECEF] flex items-center justify-between group hover:shadow-xl hover:shadow-black/5 transition-all"
-              >
-                <div className="flex items-center gap-5">
-                   <div className={cn(
-                     "w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner",
-                     tip.status === 'won' ? "bg-win/10" : "bg-red-50"
-                   )}>
-                      {tip.status === 'won' ? (
-                        <CheckCircle2 className="w-7 h-7 text-win" />
-                      ) : (
-                        <XCircle className="w-7 h-7 text-red-500" />
-                      )}
-                   </div>
-                   <div>
-                      <h5 className="font-black text-sm lowercase tracking-tight leading-none mb-1">
-                        {tip.home} <span className="text-zinc-300 font-medium">vs</span> {tip.away}
-                      </h5>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">
-                        {tip.tip} • {tip.odds} odds
-                      </p>
-                   </div>
-                </div>
-                <div className="text-right">
-                   <p className="text-[11px] font-black text-primary lowercase tracking-tight">{tip.category}</p>
-                   <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest lowercase">verified result</p>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {loading ? (
+             <div className="col-span-full py-24 flex flex-col items-center gap-4">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300">searching history...</p>
+             </div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {predictions.map((tip, index) => (
+                <motion.div
+                  key={tip.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white p-6 rounded-[32px] border border-[#E9ECEF] flex items-center justify-between group hover:shadow-xl hover:shadow-black/5 transition-all"
+                >
+                  <div className="flex items-center gap-5">
+                    <div className={cn(
+                      "w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner",
+                      tip.status === 'won' ? "bg-win/10" : (tip.status === 'lost' ? "bg-red-50" : "bg-zinc-50")
+                    )}>
+                        {tip.status === 'won' ? (
+                          <CheckCircle2 className="w-7 h-7 text-win" />
+                        ) : tip.status === 'lost' ? (
+                          <XCircle className="w-7 h-7 text-red-500" />
+                        ) : (
+                          <Clock className="w-7 h-7 text-zinc-300" />
+                        )}
+                    </div>
+                    <div>
+                        <h5 className="font-black text-sm lowercase tracking-tight leading-none mb-1">
+                          {tip.homeTeam} <span className="text-zinc-300 font-medium">vs</span> {tip.awayTeam}
+                        </h5>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">
+                          {tip.tip} • {tip.odds} odds
+                        </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] font-black text-primary lowercase tracking-tight">{tip.category}</p>
+                    <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest lowercase">{tip.status || 'pending'}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
 
-          {filteredTips.length === 0 && (
+          {!loading && predictions.length === 0 && (
             <div className="col-span-full py-24 text-center space-y-4">
               <div className="w-20 h-20 bg-zinc-50 border border-zinc-100 rounded-[32px] flex items-center justify-center mx-auto">
                  <History className="w-8 h-8 text-zinc-200" />

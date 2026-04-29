@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Shield, Crown, Lock, ArrowRight, Zap, Target, Star, ChevronRight, LayoutGrid, Flame, TrendingUp, Home as HomeIcon, FastForward, TrendingDown, Award } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, getDocs, limit, where } from 'firebase/firestore';
+import { rtdb } from '../lib/firebase';
+import { ref, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 import { Prediction } from '../types';
 import { cn } from '../lib/utils';
 import PredictionCard from '../components/PredictionCard';
@@ -24,20 +24,28 @@ export default function VIP() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCategorizedData = async () => {
+    const fetchCategorizedData = () => {
       setLoading(true);
-      const data: { [key: string]: Prediction[] } = {};
-      
-      try {
+      const predictionsRef = ref(rtdb, 'predictions');
+      const q = query(predictionsRef, orderByChild('createdAt'), limitToLast(100));
+
+      const unsubscribe = onValue(q, (snapshot) => {
+        const rawData = snapshot.val();
+        let tips: Prediction[] = [];
+        if (rawData) {
+          tips = Object.entries(rawData).map(([id, val]: [string, any]) => ({
+            id,
+            ...val
+          } as Prediction)).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        }
+
+        const categorized: { [key: string]: Prediction[] } = {};
+        
         for (const cat of THEMED_CATEGORIES) {
-          const q = query(
-            collection(db, 'predictions'),
-            where(cat.id === 'vip' ? 'isVip' : 'category', '==', cat.id === 'vip' ? true : cat.id),
-            orderBy('date', 'desc'),
-            limit(3)
-          );
-          const snapshot = await getDocs(q);
-          let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Prediction));
+          let docs = tips.filter(p => {
+            if (cat.id === 'vip') return p.isVip;
+            return p.category === cat.id;
+          }).slice(0, 3);
           
           if (docs.length === 0) {
             if (cat.id === 'vip') {
@@ -47,17 +55,20 @@ export default function VIP() {
             }
           }
           
-          data[cat.id] = docs;
+          categorized[cat.id] = docs;
         }
-        setCatData(data);
-      } catch (error) {
-        console.error("Error fetching categorized data:", error);
-      } finally {
+        setCatData(categorized);
         setLoading(false);
-      }
+      }, (error) => {
+        console.error("RTDB error in VIP:", error);
+        setLoading(false);
+      });
+
+      return unsubscribe;
     };
 
-    fetchCategorizedData();
+    const unsubscribe = fetchCategorizedData();
+    return () => unsubscribe();
   }, []);
 
   return (

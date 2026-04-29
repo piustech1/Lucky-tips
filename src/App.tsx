@@ -4,7 +4,7 @@
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Home from './pages/Home';
 import Sections from './pages/Sections';
 import VIP from './pages/VIP';
@@ -23,7 +23,8 @@ import PreviousPredictions from './pages/PreviousPredictions';
 import Subscription from './pages/Subscription';
 import Payment from './pages/Payment';
 import { ThemeProvider } from './components/ThemeProvider';
-import { UserProvider } from './contexts/UserContext';
+import { UserProvider, useUser } from './contexts/UserContext';
+import { auth } from './lib/firebase';
 
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout';
@@ -37,76 +38,83 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminHistory from './pages/admin/AdminHistory';
 
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('lucky_tips_auth') === 'true';
-  });
+function AppContent() {
+  const { user, loading, profile } = useUser();
+  const isAuthenticated = !!user;
 
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean>(() => {
+  const [hasSeenOnboarding] = useState<boolean>(() => {
     return localStorage.getItem('lucky_tips_onboarding') === 'true';
   });
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('lucky_tips_auth');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Onboarding Route */}
+        <Route 
+          path="/onboarding" 
+          element={!hasSeenOnboarding ? <Onboarding /> : <Navigate to="/login" />} 
+        />
+
+        {/* Guest Routes */}
+        <Route 
+          path="/login" 
+          element={!isAuthenticated ? <Login /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/signup" 
+          element={!isAuthenticated ? <Signup /> : <Navigate to="/" />} 
+        />
+        
+        {/* Protected Routes */}
+        <Route element={isAuthenticated ? <MainLayout onLogout={() => auth.signOut()} /> : <Navigate to={!hasSeenOnboarding ? "/onboarding" : "/login"} />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/sections" element={<Sections />} />
+          <Route path="/vip" element={<VIP />} />
+          <Route path="/subscription" element={<Subscription />} />
+          <Route path="/payment" element={<Payment />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/performance" element={<Performance />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/feedback" element={<Feedback />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/previous" element={<PreviousPredictions />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={isAuthenticated && profile?.isAdmin ? <AdminLayout /> : <Navigate to="/" />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="tips" element={<AdminTips />} />
+          <Route path="subscriptions" element={<AdminSubscriptions />} />
+          <Route path="notifications" element={<AdminNotifications />} />
+          <Route path="revenue" element={<AdminRevenue />} />
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="logs" element={<AdminLogs />} />
+          <Route path="history" element={<AdminHistory />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default function App() {
   return (
     <ThemeProvider>
       <UserProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Onboarding Route */}
-            <Route 
-              path="/onboarding" 
-              element={!hasSeenOnboarding ? <Onboarding /> : <Navigate to="/login" />} 
-            />
-
-            {/* Guest Routes */}
-            <Route 
-              path="/login" 
-              element={!isAuthenticated ? <Login /> : <Navigate to="/" />} 
-            />
-            <Route 
-              path="/signup" 
-              element={!isAuthenticated ? <Signup /> : <Navigate to="/" />} 
-            />
-            
-            {/* Protected Routes */}
-            <Route element={isAuthenticated ? <MainLayout onLogout={handleLogout} /> : <Navigate to={!hasSeenOnboarding ? "/onboarding" : "/login"} />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/sections" element={<Sections />} />
-              <Route path="/vip" element={<VIP />} />
-              <Route path="/subscription" element={<Subscription />} />
-              <Route path="/payment" element={<Payment />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/performance" element={<Performance />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/feedback" element={<Feedback />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/previous" element={<PreviousPredictions />} />
-            </Route>
-
-            {/* Admin Routes - No button in app, access via /admin */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="tips" element={<AdminTips />} />
-              <Route path="subscriptions" element={<AdminSubscriptions />} />
-              <Route path="notifications" element={<AdminNotifications />} />
-              <Route path="revenue" element={<AdminRevenue />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="logs" element={<AdminLogs />} />
-              <Route path="history" element={<AdminHistory />} />
-            </Route>
-
-            <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-        </BrowserRouter>
+        <AppContent />
       </UserProvider>
     </ThemeProvider>
   );
 }
-
