@@ -46,7 +46,7 @@ export default function AdminSettings() {
                     <p className="text-[9px] font-bold text-zinc-400 lowercase">Select which subscription tunnel to use</p>
                  </div>
                  <div className="flex bg-white p-1 rounded-2xl border border-zinc-100">
-                   {[0, 1, 2].map((idx) => (
+                   {[0, 1, 2, 3].map((idx) => (
                      <button 
                        key={idx}
                        onClick={() => handleKeyToggle(idx)}

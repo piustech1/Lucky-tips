@@ -1,7 +1,8 @@
 const API_KEYS = [
   '7f1e72e61225defa847ad7d9dbc1d5a9',
   '8bfaf57524156e3fa404491bb0573646',
-  'b5cbf791cc6454b0e11db49beaae420a'
+  'b5cbf791cc6454b0e11db49beaae420a',
+  '1754debed7044017eaa5c2538cccdf91'
 ];
 
 let primaryKeyIndex = parseInt(localStorage.getItem('active_api_key_index') || '0');

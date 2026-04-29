@@ -32,6 +32,11 @@ interface Team {
   };
 }
 
+/**
+ * Normalizes strings for consistent keys
+ */
+const normalize = (name: string) => name.toLowerCase().trim();
+
 export default function AdminLogoManager() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -67,7 +72,7 @@ export default function AdminLogoManager() {
     setIsLoadingLeagues(true);
     setError(null);
     try {
-      const data = await fetchFromFootballAPI('leagues');
+      const data = await fetchFromFootballAPI('leagues?season=2024');
       if (data.response) {
         setLeagues(data.response);
       } else {
@@ -105,19 +110,27 @@ export default function AdminLogoManager() {
     try {
       const updates: any = {};
       
-      // Map all leagues to updates using names as keys
+      // Map all leagues to updates using normalized names as keys
       leagues.forEach(l => {
-        updates[`leagues/${l.league.name}`] = {
-          logo: l.league.logo
-        };
+        const key = normalize(l.league.name);
+        if (key) {
+          updates[`leagues/${key}`] = {
+            name: l.league.name,
+            logo: l.league.logo
+          };
+        }
       });
 
-      // Map all loaded teams to updates using names as keys
+      // Map all loaded teams to updates using normalized names as keys
       teams.forEach(t => {
-        updates[`teams/${t.team.name}`] = {
-          logo: t.team.logo,
-          leagueId: selectedLeague
-        };
+        const key = normalize(t.team.name);
+        if (key) {
+          updates[`teams/${key}`] = {
+            name: t.team.name,
+            logo: t.team.logo,
+            leagueId: selectedLeague
+          };
+        }
       });
 
       // Perform bulk update on logos node

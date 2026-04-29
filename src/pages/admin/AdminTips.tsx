@@ -17,13 +17,13 @@ import {
   update, 
   query, 
   orderByChild,
-  serverTimestamp 
+  serverTimestamp,
+  get 
 } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
-import { findTeamLogo, findLeagueLogo, saveLogoToCache } from '../../services/logoService';
 
-import { fetchFromFootballAPI } from '../../services/apiService';
+const normalize = (name: string) => name.toLowerCase().trim();
 
 const CATEGORIES = [
   { id: 'free', label: 'Free Tips', icon: Sparkles },
@@ -76,13 +76,25 @@ export default function AdminTips() {
     status: 'pending'
   });
 
-  const [logoSearch, setLogoSearch] = useState<{ type: 'home' | 'away' | 'league', query: string, results: any[] }>({ type: 'home', query: '', results: [] });
-  const [logoLoading, setLogoLoading] = useState({ home: false, away: false, league: false });
-  const [isSearchingLogo, setIsSearchingLogo] = useState(false);
   const [isSubmittingResult, setIsSubmittingResult] = useState<{ id: string, status: string } | null>(null);
   const [finalScore, setFinalScore] = useState('');
+  const [cachedTeams, setCachedTeams] = useState<any[]>([]);
+  const [cachedLeagues, setCachedLeagues] = useState<any[]>([]);
 
   useEffect(() => {
+    const logosRef = ref(rtdb, 'logos');
+    get(logosRef).then((snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        if (data.teams) {
+          setCachedTeams(Object.values(data.teams));
+        }
+        if (data.leagues) {
+          setCachedLeagues(Object.values(data.leagues));
+        }
+      }
+    });
+
     const predictionsRef = ref(rtdb, 'predictions');
     const q = query(predictionsRef, orderByChild('createdAt'));
     
@@ -106,66 +118,19 @@ export default function AdminTips() {
     return () => unsubscribe();
   }, []);
 
-  const handleManualLogoSearch = async (type: 'home' | 'away' | 'league', searchQuery: string) => {
-    if (!searchQuery || searchQuery.length < 3) return;
-    setLogoLoading(prev => ({ ...prev, [type]: true }));
-    try {
-      const endpoint = type === 'league' ? 'leagues' : 'teams';
-      const data = await fetchFromFootballAPI(`${endpoint}?name=${encodeURIComponent(searchQuery)}`);
-      
-      console.log(`Manual API Search Result (${type}):`, data);
-      
-      if (data.response) {
-        setLogoSearch({ type, query: searchQuery, results: data.response });
-        setIsSearchingLogo(true);
-      }
-    } catch (error) {
-      console.error('Logo Search Error:', error);
-    } finally {
-      setLogoLoading(prev => ({ ...prev, [type]: false }));
-    }
-  };
-
-  const selectLogo = async (item: any) => {
-    const logo = logoSearch.type === 'league' ? item.league.logo : item.team.logo;
-    const name = logoSearch.type === 'league' ? item.league.name : item.team.name;
-    
-    // Save to cache when manually selected
-    try {
-      await saveLogoToCache(logoSearch.type === 'league' ? 'leagues' : 'teams', name, logo);
-    } catch (error) {
-      console.error('Manual Cache Save Error:', error);
-    }
-
-    setFormData(prev => ({ 
-      ...prev, 
-      [`${logoSearch.type}${logoSearch.type === 'league' ? '' : 'Team'}`]: name,
-      [`${logoSearch.type}Logo`]: logo 
-    }));
-    setIsSearchingLogo(false);
-  };
-
   const handleAddTip = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.homeTeam || !formData.awayTeam || !formData.league) return;
+    
     setIsSubmitting(true);
     try {
-      // Smart Logo Fetching: Only fetch if logos aren't already set manually
-      // findTeamLogo and findLeagueLogo already check cache first
-      let currentFormData = { ...formData };
-      
-      const [hLogo, aLogo, lLogo] = await Promise.all([
-        !currentFormData.homeLogo && currentFormData.homeTeam.length >= 3 ? findTeamLogo(currentFormData.homeTeam) : Promise.resolve(currentFormData.homeLogo),
-        !currentFormData.awayLogo && currentFormData.awayTeam.length >= 3 ? findTeamLogo(currentFormData.awayTeam) : Promise.resolve(currentFormData.awayLogo),
-        !currentFormData.leagueLogo && currentFormData.league.length >= 3 ? findLeagueLogo(currentFormData.league) : Promise.resolve(currentFormData.leagueLogo)
-      ]);
-
       const dataToSave = {
-        ...currentFormData,
-        homeLogo: hLogo || currentFormData.homeLogo || 'https://via.placeholder.com/150',
-        awayLogo: aLogo || currentFormData.awayLogo || 'https://via.placeholder.com/150',
-        leagueLogo: lLogo || currentFormData.leagueLogo || 'https://via.placeholder.com/50',
+        ...formData,
+        homeLogo: formData.homeLogo || 'https://via.placeholder.com/150',
+        awayLogo: formData.awayLogo || 'https://via.placeholder.com/150',
+        leagueLogo: formData.leagueLogo || 'https://via.placeholder.com/50',
         createdAt: serverTimestamp(),
-        isVip: currentFormData.category === 'vip' || currentFormData.isVip
+        isVip: formData.category === 'vip' || formData.isVip
       };
 
       const predictionsRef = ref(rtdb, 'predictions');
@@ -382,50 +347,32 @@ export default function AdminTips() {
               <form className="p-10 overflow-y-auto space-y-10 custom-scrollbar" onSubmit={(e) => { e.preventDefault(); handleAddTip(e); }}>
                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <div className="space-y-6">
-                       <div className="grid grid-cols-2 gap-4">
-                          <TeamInput 
-                            label="Home Faction" 
-                            value={formData.homeTeam} 
-                            placeholder="Home Team"
-                            logo={formData.homeLogo}
-                            loading={logoLoading.home}
-                            onChange={(e: any) => setFormData({...formData, homeTeam: e.target.value})}
-                            onSearch={() => handleManualLogoSearch('home', formData.homeTeam)}
-                          />
-                          <TeamInput 
-                            label="Away Faction" 
-                            value={formData.awayTeam} 
-                            placeholder="Away Team"
-                            logo={formData.awayLogo}
-                            loading={logoLoading.away}
-                            onChange={(e: any) => setFormData({...formData, awayTeam: e.target.value})}
-                            onSearch={() => handleManualLogoSearch('away', formData.awayTeam)}
-                          />
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Competition Area</label>
-                         <div className="relative group">
-                            <input 
-                              placeholder="Premier League"
-                              value={formData.league}
-                              onChange={(e) => setFormData({...formData, league: e.target.value})}
-                              className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-14 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
-                            />
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1.5 border border-zinc-100 shadow-sm">
-                               {logoLoading.league ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : (
-                                 <img src={formData.leagueLogo || 'https://via.placeholder.com/50'} className="w-full h-full object-contain" />
-                               )}
-                            </div>
-                            <button 
-                              type="button"
-                              onClick={() => handleManualLogoSearch('league', formData.league)}
-                              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-primary/10 rounded-xl transition-colors"
-                            >
-                               <Search className="w-4 h-4 text-primary" />
-                            </button>
-                         </div>
-                       </div>
+                        <div className="grid grid-cols-2 gap-4">
+                                <SearchableDropdown 
+                                  label="Home Faction" 
+                                  items={cachedTeams} 
+                                  value={formData.homeTeam} 
+                                  logo={formData.homeLogo}
+                                  onSelect={(item) => setFormData({...formData, homeTeam: item.name, homeLogo: item.logo})} 
+                                />
+                                <SearchableDropdown 
+                                  label="Away Faction" 
+                                  items={cachedTeams} 
+                                  value={formData.awayTeam} 
+                                  logo={formData.awayLogo}
+                                  onSelect={(item) => setFormData({...formData, awayTeam: item.name, awayLogo: item.logo})} 
+                                />
+                             </div>
+      
+                             <div className="space-y-2">
+                               <SearchableDropdown 
+                                 label="Competition Area" 
+                                 items={cachedLeagues} 
+                                 value={formData.league} 
+                                 logo={formData.leagueLogo}
+                                 onSelect={(item) => setFormData({...formData, league: item.name, leagueLogo: item.logo})} 
+                               />
+                             </div>
                     </div>
 
                     <div className="space-y-6">
@@ -526,54 +473,6 @@ export default function AdminTips() {
           </div>
         )}
 
-        {isSearchingLogo && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-             <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               className="absolute inset-0 bg-[#0A0A0A]/60 backdrop-blur-sm"
-               onClick={() => setIsSearchingLogo(false)}
-             />
-             <motion.div
-               initial={{ scale: 0.9, opacity: 0 }}
-               animate={{ scale: 1, opacity: 1 }}
-               exit={{ scale: 0.9, opacity: 0 }}
-               className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[70vh]"
-             >
-                <div className="p-8 border-b border-zinc-100 flex items-center justify-between">
-                   <div>
-                      <h4 className="text-xl font-black italic lowercase tracking-tight">Select Official Logo</h4>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Choose from verified API responses</p>
-                   </div>
-                   <XCircle className="w-6 h-6 text-zinc-300 cursor-pointer hover:text-zinc-900 transition-colors" onClick={() => setIsSearchingLogo(false)} />
-                </div>
-                <div className="p-6 overflow-y-auto space-y-3 custom-scrollbar">
-                   {logoSearch.results.length === 0 ? (
-                      <p className="text-center py-10 text-zinc-400 text-[10px] font-black uppercase tracking-widest">Logo not found</p>
-                   ) : (
-                      logoSearch.results.map((item, i) => (
-                         <div 
-                           key={i} 
-                           onClick={() => selectLogo(item)}
-                           className="p-4 rounded-2xl hover:bg-zinc-50 border border-transparent hover:border-zinc-100 cursor-pointer flex items-center gap-4 transition-all"
-                         >
-                            <div className="w-12 h-12 bg-white rounded-xl border border-zinc-100 p-2 flex items-center justify-center">
-                               <img src={logoSearch.type === 'league' ? item.league.logo : item.team.logo} className="w-full h-full object-contain" />
-                            </div>
-                            <div className="flex-1">
-                               <p className="text-sm font-black italic lowercase">{logoSearch.type === 'league' ? item.league.name : item.team.name}</p>
-                               <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">{logoSearch.type === 'league' ? 'Market League' : item.team.country || 'Global Club'}</p>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-zinc-300" />
-                         </div>
-                      ))
-                   )}
-                </div>
-             </motion.div>
-          </div>
-        )}
-
         {isSubmittingResult && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
              <motion.div 
@@ -630,6 +529,73 @@ export default function AdminTips() {
   );
 }
 
+function SearchableDropdown({ label, items, value, logo, onSelect }: { label: string, items: any[], value: string, logo: string, onSelect: (item: any) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filteredItems = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).slice(0, 50);
+
+  return (
+    <div className="space-y-2 group flex-1 relative">
+      <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">{label}</label>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] pl-16 pr-6 cursor-pointer flex items-center shadow-sm hover:border-primary/30 transition-all"
+      >
+        <div className="absolute left-3 w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 border border-zinc-100">
+          <img src={logo || 'https://via.placeholder.com/150'} className="w-full h-full object-contain" onError={(e) => e.currentTarget.src = 'https://via.placeholder.com/150'} />
+        </div>
+        <span className={cn("text-sm font-black lowercase", !value && "text-zinc-300")}>{value || `Select ${label}...`}</span>
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-zinc-100 rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[300px]"
+            >
+              <div className="p-4 border-b border-zinc-50">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+                  <input 
+                    autoFocus
+                    placeholder="Search matrix..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full h-10 bg-zinc-50 rounded-xl pl-10 pr-4 text-xs font-bold outline-none border border-zinc-100"
+                  />
+                </div>
+              </div>
+              <div className="overflow-y-auto custom-scrollbar">
+                {filteredItems.length === 0 ? (
+                  <div className="p-10 text-center text-zinc-400 text-[10px] font-black uppercase tracking-widest">No matching frequency</div>
+                ) : (
+                  filteredItems.map((item, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => { onSelect(item); setIsOpen(false); setSearch(''); }}
+                      className="p-4 hover:bg-zinc-50 flex items-center gap-4 cursor-pointer border-b border-zinc-50 last:border-0"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-white border border-zinc-100 p-1 flex items-center justify-center">
+                        <img src={item.logo} className="w-full h-full object-contain" />
+                      </div>
+                      <span className="text-xs font-black italic lowercase">{item.name}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function FilterButton({ children, active, onClick }: any) {
   return (
     <button
@@ -663,33 +629,5 @@ function StatusIcon({ active, color, icon: Icon, onClick }: any) {
     >
        <Icon className="w-4 h-4" />
     </button>
-  );
-}
-
-function TeamInput({ label, value, onChange, placeholder, logo, loading, onSearch }: any) {
-  return (
-    <div className="space-y-2 group flex-1">
-      <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">{label}</label>
-      <div className="relative">
-         <div className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 border border-zinc-100">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : (
-              logo ? <img src={logo} className="w-full h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-zinc-200" />
-            )}
-         </div>
-         <input 
-           value={value}
-           onChange={onChange}
-           placeholder={placeholder}
-           className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] pl-16 pr-12 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
-         />
-         <button 
-           type="button"
-           onClick={onSearch}
-           className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-primary/10 rounded-xl transition-colors"
-         >
-            <Search className="w-4 h-4 text-primary" />
-         </button>
-      </div>
-    </div>
   );
 }
