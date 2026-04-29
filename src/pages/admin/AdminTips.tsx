@@ -11,7 +11,13 @@ import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 
 const CATEGORIES = [
-  'football', 'basketball', 'tennis', 'hockey', 'esports'
+  { id: 'free', label: 'Free Tips' },
+  { id: 'vip', label: 'VIP Tips' },
+  { id: '1x', label: 'Home Advantage' },
+  { id: 'x2', label: 'Away Force' },
+  { id: 'bts', label: 'Both Teams Score' },
+  { id: 'over25', label: 'Over 2.5 Market' },
+  { id: 'under25', label: 'Under 2.5 Market' }
 ];
 
 const MOCK_TIPS = [
@@ -22,7 +28,7 @@ const MOCK_TIPS = [
     homeLogo: 'https://media.api-sports.io/football/teams/42.png',
     awayLogo: 'https://media.api-sports.io/football/teams/50.png',
     league: 'Premier League',
-    category: 'football',
+    category: 'over25',
     odds: '1.95',
     tip: 'Over 2.5 Goals',
     time: '21:00',
@@ -32,15 +38,15 @@ const MOCK_TIPS = [
   },
   {
     id: '2',
-    homeTeam: 'Lakers',
-    awayTeam: 'Warriors',
-    homeLogo: 'https://media.api-sports.io/basketball/teams/145.png',
-    awayLogo: 'https://media.api-sports.io/basketball/teams/141.png',
-    league: 'NBA',
-    category: 'basketball',
+    homeTeam: 'Real Madrid',
+    awayTeam: 'Barcelona',
+    homeLogo: 'https://media.api-sports.io/football/teams/541.png',
+    awayLogo: 'https://media.api-sports.io/football/teams/529.png',
+    league: 'La Liga',
+    category: 'bts',
     odds: '1.80',
-    tip: 'Home -4.5',
-    time: '03:30',
+    tip: 'Both Teams Score',
+    time: '22:00',
     date: '2024-04-28',
     status: 'won',
     isVip: false
@@ -74,16 +80,25 @@ export default function AdminTips() {
 
       {/* Categories Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-         {['all', ...CATEGORIES].map(cat => (
+         <button
+           onClick={() => setFilter('all')}
+           className={cn(
+             "h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap lowercase",
+             filter === 'all' ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-zinc-50"
+           )}
+         >
+           all logs
+         </button>
+         {CATEGORIES.map(cat => (
            <button
-             key={cat}
-             onClick={() => setFilter(cat)}
+             key={cat.id}
+             onClick={() => setFilter(cat.id)}
              className={cn(
                "h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap lowercase",
-               filter === cat ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-zinc-50"
+               filter === cat.id ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-zinc-50"
              )}
            >
-             {cat}
+             {cat.label}
            </button>
          ))}
       </div>
@@ -126,9 +141,9 @@ export default function AdminTips() {
                    <AdminInput label="Away Team" placeholder="Man City" />
                    <AdminInput label="League" placeholder="Premier League" />
                    <div className="space-y-2">
-                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Category</label>
+                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Market Category</label>
                      <select className="w-full h-14 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl px-4 text-sm font-black lowercase tracking-tight outline-none focus:ring-2 focus:ring-primary/20">
-                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                      </select>
                    </div>
                    <AdminInput label="Odds" placeholder="1.95" icon={TrendingUp} />
@@ -201,8 +216,10 @@ export default function AdminTips() {
                     <p className="text-sm font-black text-primary tracking-tight">{tip.odds}</p>
                  </div>
                  <div className="space-y-1 text-center">
-                    <p className="text-[8px] font-black text-zinc-300 uppercase tracking-widest lowercase">Category</p>
-                    <p className="text-sm font-black text-zinc-900 lowercase tracking-tight">{tip.category}</p>
+                    <p className="text-[8px] font-black text-zinc-300 uppercase tracking-widest lowercase">Market</p>
+                    <p className="text-sm font-black text-zinc-900 lowercase tracking-tight">
+                      {CATEGORIES.find(c => c.id === tip.category)?.label || tip.category}
+                    </p>
                  </div>
               </div>
 

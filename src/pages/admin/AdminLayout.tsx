@@ -27,35 +27,57 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans flex antialiased selection:bg-primary/20">
+      {/* Sidebar Overlay for Mobile/Drawer effect */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <AnimatePresence mode="wait">
         {isSidebarOpen && (
           <motion.aside 
-            initial={{ x: -280, opacity: 0 }}
+            initial={{ x: -320, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -280, opacity: 0 }}
-            className="fixed inset-y-0 left-0 w-72 bg-white border-r border-[#E9ECEF] z-50 flex flex-col shadow-xl shadow-black/5"
+            exit={{ x: -320, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 left-0 w-80 bg-white border-r border-[#E9ECEF] z-50 flex flex-col shadow-2xl shadow-black/10"
           >
             <div className="p-8 border-b border-[#E9ECEF]">
-              <div 
-                className="flex items-center gap-3 cursor-pointer group"
-                onClick={() => navigate('/')}
-              >
-                <div className="w-10 h-10 bg-premium-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:scale-110">
-                  <Trophy className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-between mb-6">
+                <div 
+                  className="flex items-center gap-3 cursor-pointer group"
+                  onClick={() => navigate('/')}
+                >
+                  <div className="w-10 h-10 bg-premium-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:scale-110">
+                    <Trophy className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-black tracking-tighter flex items-center gap-1 lowercase">
+                      <span 
+                        className="bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent italic inline-block"
+                        style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+                      >
+                        lucky
+                      </span>
+                      <span className="text-[#1A1A1A]">panel</span>
+                    </h1>
+                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-zinc-400 -mt-1 lowercase">management engine v2</p>
+                  </div>
                 </div>
-                <div>
-                   <h1 className="text-xl font-black tracking-tighter flex items-center gap-1 lowercase">
-                     <span 
-                       className="bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent italic inline-block"
-                       style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-                     >
-                       lucky
-                     </span>
-                     <span className="text-[#1A1A1A]">panel</span>
-                   </h1>
-                   <p className="text-[9px] font-black uppercase tracking-[0.1em] text-zinc-400 -mt-1 lowercase">management engine v2</p>
-                </div>
+                <button 
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-2 rounded-xl bg-zinc-50 text-zinc-400 hover:text-zinc-600 transition-all active:scale-90"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
@@ -65,6 +87,7 @@ export default function AdminLayout() {
                   key={item.path}
                   to={item.path}
                   end={item.path === '/admin'}
+                  onClick={() => setIsSidebarOpen(false)}
                   className={({ isActive }) => cn(
                     "flex items-center gap-3.5 p-4 rounded-2xl transition-all group relative",
                     isActive 
@@ -85,7 +108,7 @@ export default function AdminLayout() {
                         {isActive && (
                            <motion.div 
                              layoutId="sidebar-indicator"
-                             className="absolute left-0 w-1 h-8 bg-primary rounded-r-full"
+                             className="absolute left-0 w-1.5 h-8 bg-primary rounded-r-full"
                            />
                         )}
                      </>
@@ -108,24 +131,25 @@ export default function AdminLayout() {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <div className={cn(
-        "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out",
-        isSidebarOpen ? "ml-72" : "ml-0"
-      )}>
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#E9ECEF] px-8 flex items-center justify-between sticky top-0 z-40">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#E9ECEF] px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2.5 rounded-xl bg-[#F1F3F5] text-zinc-600 hover:bg-[#E9ECEF] transition-all active:scale-90"
+              onClick={() => setIsSidebarOpen(true)}
+              className={cn(
+                "p-2.5 rounded-xl bg-[#F1F3F5] text-zinc-600 hover:bg-[#E9ECEF] transition-all active:scale-90",
+                isSidebarOpen && "opacity-0 pointer-events-none"
+              )}
             >
-              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <Menu className="w-5 h-5" />
             </button>
             <div>
                <h2 className="text-xl font-black lowercase tracking-tight text-[#1A1A1A]">lucky dashboard</h2>
                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest -mt-1 lowercase">live system overview</p>
             </div>
           </div>
+
 
           <div className="flex items-center gap-6">
             <div className="hidden md:flex flex-col items-right text-right">
