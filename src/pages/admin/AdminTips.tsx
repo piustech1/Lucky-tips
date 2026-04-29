@@ -21,7 +21,7 @@ import {
 } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
-import { findTeamLogo, findLeagueLogo } from '../../services/logoService';
+import { findTeamLogo, findLeagueLogo, saveLogoToCache } from '../../services/logoService';
 
 const CATEGORIES = [
   { id: 'free', label: 'Free Tips', icon: Sparkles },
@@ -129,10 +129,17 @@ export default function AdminTips() {
     }
   };
 
-  const selectLogo = (item: any) => {
+  const selectLogo = async (item: any) => {
     const logo = logoSearch.type === 'league' ? item.league.logo : item.team.logo;
     const name = logoSearch.type === 'league' ? item.league.name : item.team.name;
     
+    // Save to cache when manually selected
+    try {
+      await saveLogoToCache(logoSearch.type === 'league' ? 'leagues' : 'teams', name, logo);
+    } catch (error) {
+      console.error('Manual Cache Save Error:', error);
+    }
+
     setFormData(prev => ({ 
       ...prev, 
       [`${logoSearch.type}${logoSearch.type === 'league' ? '' : 'Team'}`]: name,
@@ -145,12 +152,28 @@ export default function AdminTips() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const predictionsRef = ref(rtdb, 'predictions');
-      await push(predictionsRef, {
-        ...formData,
+      // Smart Logo Fetching: Only fetch if logos aren't already set manually
+      // findTeamLogo and findLeagueLogo already check cache first
+      let currentFormData = { ...formData };
+      
+      const [hLogo, aLogo, lLogo] = await Promise.all([
+        !currentFormData.homeLogo && currentFormData.homeTeam.length >= 3 ? findTeamLogo(currentFormData.homeTeam) : Promise.resolve(currentFormData.homeLogo),
+        !currentFormData.awayLogo && currentFormData.awayTeam.length >= 3 ? findTeamLogo(currentFormData.awayTeam) : Promise.resolve(currentFormData.awayLogo),
+        !currentFormData.leagueLogo && currentFormData.league.length >= 3 ? findLeagueLogo(currentFormData.league) : Promise.resolve(currentFormData.leagueLogo)
+      ]);
+
+      const dataToSave = {
+        ...currentFormData,
+        homeLogo: hLogo || currentFormData.homeLogo || 'https://via.placeholder.com/150',
+        awayLogo: aLogo || currentFormData.awayLogo || 'https://via.placeholder.com/150',
+        leagueLogo: lLogo || currentFormData.leagueLogo || 'https://via.placeholder.com/50',
         createdAt: serverTimestamp(),
-        isVip: formData.category === 'vip' || formData.isVip
-      });
+        isVip: currentFormData.category === 'vip' || currentFormData.isVip
+      };
+
+      const predictionsRef = ref(rtdb, 'predictions');
+      await push(predictionsRef, dataToSave);
+      
       setIsAdding(false);
       setFormData({
         homeTeam: '',
