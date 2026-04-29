@@ -108,8 +108,15 @@ export default function AdminTips() {
     if (!searchQuery || searchQuery.length < 3) return;
     setLogoLoading(prev => ({ ...prev, [type]: true }));
     try {
+      const API_KEY = '7f1e72e61225defa847ad7d9dbc1d5a9';
+      const BASE_URL = 'https://v3.football.api-sports.io';
       const endpoint = type === 'league' ? 'leagues' : 'teams';
-      const response = await fetch(`/api/proxy/sports?endpoint=${endpoint}&search=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${BASE_URL}/${endpoint}?search=${encodeURIComponent(searchQuery)}`, {
+        method: 'GET',
+        headers: {
+          'x-apisports-key': API_KEY,
+        }
+      });
       const data = await response.json();
       if (data.response) {
         setLogoSearch({ type, query: searchQuery, results: data.response });
@@ -639,7 +646,7 @@ function StatusIcon({ active, color, icon: Icon, onClick }: any) {
   );
 }
 
-function TeamInput({ label, value, onChange, onBlur, placeholder, logo, loading }: any) {
+function TeamInput({ label, value, onChange, placeholder, logo, loading, onSearch }: any) {
   return (
     <div className="space-y-2 group flex-1">
       <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">{label}</label>
@@ -652,10 +659,16 @@ function TeamInput({ label, value, onChange, onBlur, placeholder, logo, loading 
          <input 
            value={value}
            onChange={onChange}
-           onBlur={onBlur}
            placeholder={placeholder}
-           className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] pl-16 pr-6 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
+           className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] pl-16 pr-12 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
          />
+         <button 
+           type="button"
+           onClick={onSearch}
+           className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-primary/10 rounded-xl transition-colors"
+         >
+            <Search className="w-4 h-4 text-primary" />
+         </button>
       </div>
     </div>
   );

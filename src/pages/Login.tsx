@@ -59,12 +59,12 @@ export default function Login() {
         <img 
           src="https://resources.premierleague.pulselive.com/premierleague/photo/2024/12/24/18c87529-827d-4cb1-ae61-c9bf9b0904ed/PL2425-BEST-PHOTOS-Arsenal.png" 
           alt="Login Hero"
-          className="absolute inset-0 w-full h-full object-cover grayscale opacity-60"
+          className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#103D39] via-[#103D39]/40 to-transparent" />
         
         <div className="absolute top-10 right-6 left-6 flex items-center justify-between z-20">
-          <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-12 h-12 object-contain drop-shadow-xl brightness-200" />
+          <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-12 h-12 object-contain drop-shadow-xl" />
           <button 
             onClick={() => navigate('/')}
             className="px-5 py-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all shadow-lg"

@@ -117,7 +117,7 @@ export default function Signup() {
         <img 
           src="https://img.freepik.com/premium-photo/soccer-ball-rain-with-lights-photo_1233553-36592.jpg?semt=ais_hybrid&w=740&q=80" 
           alt="Signup Hero"
-          className="absolute inset-0 w-full h-full object-cover grayscale opacity-60"
+          className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#103D39] via-[#103D39]/20 to-transparent" />
         
@@ -128,7 +128,7 @@ export default function Signup() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-12 h-12 object-contain drop-shadow-xl brightness-200" />
+          <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-12 h-12 object-contain drop-shadow-xl" />
         </div>
 
         <div className="absolute bottom-6 left-10 right-10 text-center">

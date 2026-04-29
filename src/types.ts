@@ -12,6 +12,7 @@ export interface Prediction {
   awayFlag?: string;
   homeLogo?: string;
   awayLogo?: string;
+  leagueLogo?: string;
   score?: string;
   isVip?: boolean;
   category?: string;

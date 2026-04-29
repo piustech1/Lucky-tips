@@ -63,6 +63,9 @@ export default function PredictionCard({ prediction, index = 0 }: PredictionCard
       {/* Brand Header */}
       <div className="bg-primary-dark px-4 py-2.5 flex justify-between items-center text-white">
         <div className="flex items-center gap-2">
+          {prediction.leagueLogo && (
+            <img src={prediction.leagueLogo} alt={prediction.league} className="w-4 h-4 object-contain" />
+          )}
           <span className="text-[10px] font-black lowercase tracking-widest opacity-90">{prediction.league}</span>
           {prediction.isVip ? (
             <span className="bg-yellow-400 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter shadow-sm">vip</span>
