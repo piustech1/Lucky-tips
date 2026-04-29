@@ -26,6 +26,8 @@ import { ThemeProvider } from './components/ThemeProvider';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { auth } from './lib/firebase';
 
+import AdminLogin from './pages/AdminLogin';
+
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -69,6 +71,10 @@ function AppContent() {
           element={!isAuthenticated ? <Login /> : <Navigate to="/" />} 
         />
         <Route 
+          path="/admin/login" 
+          element={<AdminLogin />} 
+        />
+        <Route 
           path="/signup" 
           element={!isAuthenticated ? <Signup /> : <Navigate to="/" />} 
         />
@@ -91,7 +97,7 @@ function AppContent() {
         </Route>
 
         {/* Admin Routes */}
-        <Route path="/admin" element={isAuthenticated && profile?.isAdmin ? <AdminLayout /> : <Navigate to="/" />}>
+        <Route path="/admin" element={localStorage.getItem('admin_authenticated') === 'true' ? <AdminLayout /> : <Navigate to="/admin/login" />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="tips" element={<AdminTips />} />
