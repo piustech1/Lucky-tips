@@ -12,7 +12,8 @@ export default function AdminLogin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'pius' && password === 'greatdev') {
+    // Flexible credentials as requested: accept 'pius', 'admin', or 'piustech' with 'greatdev' password
+    if ((username === 'pius' || username === 'admin' || username === 'piustech') && password === 'greatdev') {
       localStorage.setItem('admin_authenticated', 'true');
       navigate('/admin');
     } else {

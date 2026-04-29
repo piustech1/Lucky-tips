@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, Trophy, Wallet, 
   Bell, BarChart3, Settings, LogOut, 
-  Menu, X, History, FileText, Activity
+  Menu, X, History, FileText, Activity, Globe
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Trophy, label: 'Tips System', path: '/admin/tips' },
+  { icon: Globe, label: 'Logo Manager', path: '/admin/logo-manager' },
   { icon: History, label: 'Tips History', path: '/admin/history' },
   { icon: Users, label: 'User Hub', path: '/admin/users' },
   { icon: Wallet, label: 'Subscriptions', path: '/admin/subscriptions' },
