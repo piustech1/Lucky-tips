@@ -60,7 +60,12 @@ export default function Signup() {
       navigate('/');
     } catch (err: any) {
       console.error('Signup error:', err);
-      setError(err.message || 'Failed to create account. Please try again.');
+      let message = 'Failed to create account. Please try again.';
+      if (err.code === 'auth/email-already-in-use') message = 'This email is already registered.';
+      if (err.code === 'auth/invalid-email') message = 'Please enter a valid email address.';
+      if (err.code === 'auth/operation-not-allowed') message = 'Email/Password sign-in is not enabled in Firebase Console.';
+      if (err.code === 'auth/weak-password') message = 'Password should be at least 6 characters.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +100,10 @@ export default function Signup() {
       navigate('/');
     } catch (err: any) {
       console.error('Google signup error:', err);
-      setError('Google signup failed. Please try again.');
+      let message = 'Google signup failed. Please try again.';
+      if (err.code === 'auth/operation-not-allowed') message = 'Google sign-in is not enabled in Firebase Console.';
+      if (err.code === 'auth/popup-closed-by-user') message = 'Signup cancelled.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }

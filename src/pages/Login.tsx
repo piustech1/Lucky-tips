@@ -27,7 +27,11 @@ export default function Login() {
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
-      setError('Invalid email or password. Please try again.');
+      let message = 'Invalid email or password. Please try again.';
+      if (err.code === 'auth/user-not-found') message = 'No account found with this email.';
+      if (err.code === 'auth/wrong-password') message = 'Incorrect password. Try again.';
+      if (err.code === 'auth/operation-not-allowed') message = 'Email/Password sign-in is not enabled in Firebase Console.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
