@@ -3,7 +3,7 @@ import {
   DollarSign, ArrowUpRight, TrendingUp, 
   Download, Filter, Calendar, 
   CreditCard, Wallet, Smartphone,
-  BarChart3, PieChart, Coins
+  BarChart3, PieChart, Coins, Loader2
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
+import { rtdb } from '../../lib/firebase';
+import { ref, onValue } from 'firebase/database';
 
 const data = [
   { name: 'Mon', revenue: 420000, subscriptions: 12 },
@@ -23,7 +25,37 @@ const data = [
 ];
 
 export default function AdminRevenue() {
-  const totalRevenue = data.reduce((acc, curr) => acc + curr.revenue, 0);
+  const [stats, setStats] = React.useState({
+    totalRevenue: 0,
+    activeSubs: 0,
+    dailyAvg: 0
+  });
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const usersRef = ref(rtdb, 'users');
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+      const dataVal = snapshot.val() || {};
+      const users = Object.values(dataVal) as any[];
+      const activeSubs = users.filter((u: any) => u.subscriptionTier === 'vip').length;
+      
+      // Price per sub is 50,000 UGX
+      const SUB_PRICE = 50000;
+      const totalRevenue = activeSubs * SUB_PRICE;
+      const dailyAvg = totalRevenue / 30;
+
+      setStats({
+        totalRevenue,
+        activeSubs,
+        dailyAvg: Math.round(dailyAvg)
+      });
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const totalRevenue = stats.totalRevenue;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -35,7 +67,7 @@ export default function AdminRevenue() {
               <div className="space-y-1">
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Matrix Gross Revenue</p>
                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-black italic tracking-tighter">
-                   {totalRevenue.toLocaleString()} <span className="text-2xl opacity-50 not-italic">UGX</span>
+                    {loading ? '...' : totalRevenue.toLocaleString()} <span className="text-2xl opacity-50 not-italic">UGX</span>
                  </h2>
               </div>
               <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-[24px] flex items-center justify-center">
@@ -45,13 +77,13 @@ export default function AdminRevenue() {
            
            <div className="flex items-center gap-8 relative z-10">
               <div className="space-y-1">
-                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Weekly Pulse</p>
-                 <p className="text-xl font-black">+{Math.round(totalRevenue / 7).toLocaleString()} UGX / day</p>
+                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Monthly Pulse</p>
+                 <p className="text-xl font-black">+{stats.dailyAvg.toLocaleString()} UGX / day</p>
               </div>
               <div className="h-10 w-[2px] bg-white/20" />
               <div className="space-y-1">
-                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Market Accuracy</p>
-                 <p className="text-xl font-black text-win">94% Stability</p>
+                 <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Active VIPs</p>
+                 <p className="text-xl font-black text-win">{stats.activeSubs} Users</p>
               </div>
            </div>
         </div>

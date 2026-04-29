@@ -13,14 +13,14 @@
 
 @layer base {
   :root {
-    --background: #F8F9FA;
-    --foreground: #1A1A1A;
+    --background: #F0F9F8;
+    --foreground: #103D39;
     --card: #FFFFFF;
-    --card-foreground: #1A1A1A;
-    --muted: #E0F7F5;
-    --muted-foreground: #6C757D;
-    --border: #E5E5E5;
-    --accent: #E0F7F5;
+    --card-foreground: #103D39;
+    --muted: #D1F2EF;
+    --muted-foreground: #4A7A75;
+    --border: #E2ECEB;
+    --accent: #B2E5E0;
   }
 
   .dark {

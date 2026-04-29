@@ -50,33 +50,11 @@ export default function Sections() {
         }
       }
 
-      if (tips.length === 0) {
-        if (activeCategory === 'all') {
-          tips = MOCK_PREDICTIONS;
-        } else if (activeCategory === 'vip') {
-          tips = MOCK_PREDICTIONS.filter(p => p.isVip);
-        } else if (activeCategory === 'free') {
-          tips = MOCK_PREDICTIONS.filter(p => p.category === 'free');
-        } else {
-          tips = MOCK_PREDICTIONS.filter(p => p.category === activeCategory);
-        }
-      }
-
       setPredictions(tips);
       setLoading(false);
     }, (error) => {
       console.error("RTDB error:", error);
-      let tips: Prediction[] = [];
-      if (activeCategory === 'all') {
-        tips = MOCK_PREDICTIONS;
-      } else if (activeCategory === 'vip') {
-        tips = MOCK_PREDICTIONS.filter(p => p.isVip);
-      } else if (activeCategory === 'free') {
-        tips = MOCK_PREDICTIONS.filter(p => p.category === 'free');
-      } else {
-        tips = MOCK_PREDICTIONS.filter(p => p.category === activeCategory);
-      }
-      setPredictions(tips);
+      setPredictions([]);
       setLoading(false);
     });
 

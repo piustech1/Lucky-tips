@@ -4,7 +4,7 @@ import {
   Trash2, Edit2, Clock, Globe, 
   TrendingUp, CheckCircle2, XCircle, 
   ChevronRight, LayoutGrid, Image as ImageIcon,
-  DollarSign, Hash, Loader2
+  DollarSign, Hash, Loader2, Sparkles, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -21,17 +21,35 @@ import {
 } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
-import { findTeamLogo } from '../../services/logoService';
+import { findTeamLogo, findLeagueLogo } from '../../services/logoService';
 
 const CATEGORIES = [
-  { id: 'free', label: 'Free Tips' },
-  { id: 'vip', label: 'VIP Tips' },
-  { id: '1x', label: 'Home Advantage' },
-  { id: 'x2', label: 'Away Force' },
-  { id: 'bts', label: 'Both Teams Score' },
-  { id: 'over25', label: 'Over 2.5 Market' },
-  { id: 'under25', label: 'Under 2.5 Market' }
+  { id: 'free', label: 'Free Tips', icon: Sparkles },
+  { id: 'vip', label: 'VIP Tips', icon: Zap },
+  { id: '1x', label: '1X Market', icon: TargetIcon },
+  { id: 'x2', label: 'X2 Market', icon: TargetIcon },
+  { id: 'bts', label: 'Both Score', icon: TargetIcon },
+  { id: 'over25', label: 'Over 2.5', icon: TargetIcon },
+  { id: 'under25', label: 'Under 2.5', icon: TargetIcon }
 ];
+
+function TargetIcon(props: any) {
+  return (
+    <svg 
+      {...props} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="3" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  );
+}
 
 export default function AdminTips() {
   const [tips, setTips] = useState<any[]>([]);
@@ -51,12 +69,12 @@ export default function AdminTips() {
     odds: '',
     tip: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    time: '20:00',
+    time: '18:00',
     isVip: false,
     status: 'pending'
   });
 
-  const [logoLoading, setLogoLoading] = useState({ home: false, away: false });
+  const [logoLoading, setLogoLoading] = useState({ home: false, away: false, league: false });
 
   useEffect(() => {
     const predictionsRef = ref(rtdb, 'predictions');
@@ -65,12 +83,10 @@ export default function AdminTips() {
     const unsubscribe = onValue(q, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // RTDB returns an object, so we convert it to an array and sort manually because RTDB sorting is limited
         const tipsList = Object.entries(data).map(([id, val]: [string, any]) => ({
           id,
           ...val
         })).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        
         setTips(tipsList);
       } else {
         setTips([]);
@@ -85,11 +101,23 @@ export default function AdminTips() {
   }, []);
 
   const handleLogoFetch = async (type: 'home' | 'away', name: string) => {
-    if (!name) return;
+    if (!name || name.length < 3) return;
     setLogoLoading(prev => ({ ...prev, [type]: true }));
     const logo = await findTeamLogo(name);
-    setFormData(prev => ({ ...prev, [`${type}Logo`]: logo }));
+    if (logo) {
+      setFormData(prev => ({ ...prev, [`${type}Logo`]: logo }));
+    }
     setLogoLoading(prev => ({ ...prev, [type]: false }));
+  };
+
+  const handleLeagueLogoFetch = async (name: string) => {
+    if (!name || name.length < 3) return;
+    setLogoLoading(prev => ({ ...prev, league: true }));
+    const logo = await findLeagueLogo(name);
+    if (logo) {
+      setFormData(prev => ({ ...prev, leagueLogo: logo }));
+    }
+    setLogoLoading(prev => ({ ...prev, league: false }));
   };
 
   const handleAddTip = async (e: React.FormEvent) => {
@@ -114,12 +142,12 @@ export default function AdminTips() {
         odds: '',
         tip: '',
         date: format(new Date(), 'yyyy-MM-dd'),
-        time: '20:00',
+        time: '18:00',
         isVip: false,
         status: 'pending'
       });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'predictions');
+       console.error('Add Tip Error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +163,7 @@ export default function AdminTips() {
   };
 
   const deleteTip = async (id: string) => {
-    if (!window.confirm('Delete this tip permanently?')) return;
+    if (!window.confirm('Erase this prediction from history?')) return;
     try {
       const tipRef = ref(rtdb, `predictions/${id}`);
       await remove(tipRef);
@@ -147,51 +175,133 @@ export default function AdminTips() {
   const filteredTips = filter === 'all' ? tips : tips.filter(t => t.category === filter);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[40px] border border-[#E9ECEF]">
-        <div className="space-y-1">
-           <h3 className="text-2xl font-black lowercase tracking-tight italic">Tips Engine</h3>
-           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">the main factory of accurate predictions</p>
-        </div>
-        
-        <div className="flex gap-4">
-           <button 
-             onClick={() => setIsAdding(true)}
-             className="h-14 px-8 bg-premium-gradient text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
-           >
-             <Plus className="w-5 h-5" />
-             Forge New Tip
-           </button>
-        </div>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Dynamic Header */}
+      <div className="relative p-10 bg-zinc-900 rounded-[56px] overflow-hidden group shadow-2xl">
+         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/20 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse" />
+         
+         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-10">
+            <div className="space-y-3">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                     <Trophy className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Live Production Hub</span>
+               </div>
+               <h1 className="text-4xl md:text-5xl font-black italic text-white tracking-tighter lowercase leading-none">Prediction Forge</h1>
+               <p className="text-zinc-500 text-xs font-medium max-w-md lowercase leading-relaxed">
+                  Generate high-probability outcomes for the global market. Your insights drive the collective victory.
+               </p>
+            </div>
+
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsAdding(true)}
+              className="h-16 px-10 bg-primary text-[#103D39] rounded-[24px] text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/30 flex items-center gap-3 group/btn"
+            >
+              <Plus className="w-5 h-5 transition-transform group-hover/btn:rotate-90" />
+              Craft Match Tip
+            </motion.button>
+         </div>
       </div>
 
-      {/* Categories Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-         <button
-           onClick={() => setFilter('all')}
-           className={cn(
-             "h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap lowercase",
-             filter === 'all' ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-zinc-50"
-           )}
-         >
-           all logs
-         </button>
+      {/* Modern Filter Rail */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar">
+         <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>All Markets</FilterButton>
          {CATEGORIES.map(cat => (
-           <button
-             key={cat.id}
-             onClick={() => setFilter(cat.id)}
-             className={cn(
-               "h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap lowercase",
-               filter === cat.id ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-zinc-50"
-             )}
-           >
-             {cat.label}
-           </button>
+           <FilterButton key={cat.id} active={filter === cat.id} onClick={() => setFilter(cat.id)}>
+              <cat.icon className="w-3.5 h-3.5" />
+              {cat.label}
+           </FilterButton>
          ))}
       </div>
 
-      {/* Add Tip Modal */}
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+         {loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-64 bg-zinc-100 rounded-[48px] animate-pulse" />
+            ))
+         ) : filteredTips.length === 0 ? (
+            <div className="col-span-full py-32 flex flex-col items-center justify-center text-zinc-300 gap-6">
+               <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center border border-zinc-100">
+                  <LayoutGrid className="w-10 h-10 opacity-20" />
+               </div>
+               <p className="text-[10px] font-black uppercase tracking-[0.4em] lowercase">The forge is currently empty</p>
+            </div>
+         ) : filteredTips.map((tip, index) => (
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              key={tip.id}
+              className="p-8 bg-white border border-[#E9ECEF] rounded-[48px] hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transition-all group relative overflow-hidden"
+            >
+               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+               
+               <div className="flex items-center justify-between mb-8 relative z-10">
+                  <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-zinc-50 flex items-center justify-center p-1 border border-zinc-100">
+                        <img src={tip.leagueLogo || 'https://via.placeholder.com/50'} className="w-full h-full object-contain" />
+                     </div>
+                     <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 lowercase">{tip.league}</span>
+                  </div>
+                  <div className={cn(
+                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest lowercase",
+                    tip.status === 'won' ? "bg-win/10 text-win" : tip.status === 'lost' ? "bg-red-50 text-red-500" : "bg-zinc-50 text-zinc-400"
+                  )}>
+                    {tip.status}
+                  </div>
+               </div>
+
+               <div className="flex items-center justify-center gap-4 mb-8">
+                  <div className="flex-1 space-y-3 text-center">
+                     <div className="w-14 h-14 bg-zinc-50 rounded-2xl mx-auto flex items-center justify-center p-2 border border-zinc-100 shadow-sm transition-transform group-hover:scale-110">
+                        <img src={tip.homeLogo || 'https://via.placeholder.com/150'} className="w-full h-full object-contain" />
+                     </div>
+                     <p className="text-[10px] font-black text-zinc-900 leading-tight lowercase truncate">{tip.homeTeam}</p>
+                  </div>
+                  <div className="px-3 py-1 bg-zinc-100 rounded-full">
+                     <span className="text-[9px] font-black text-zinc-400 uppercase">VS</span>
+                  </div>
+                  <div className="flex-1 space-y-3 text-center">
+                     <div className="w-14 h-14 bg-zinc-50 rounded-2xl mx-auto flex items-center justify-center p-2 border border-zinc-100 shadow-sm transition-transform group-hover:scale-110">
+                        <img src={tip.awayLogo || 'https://via.placeholder.com/150'} className="w-full h-full object-contain" />
+                     </div>
+                     <p className="text-[10px] font-black text-zinc-900 leading-tight lowercase truncate">{tip.awayTeam}</p>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-3 mb-8">
+                  <div className="p-4 bg-zinc-50 rounded-[24px] border border-zinc-100/50">
+                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1 lowercase">Selection</p>
+                     <p className="text-xs font-black text-zinc-900 lowercase truncate leading-tight">{tip.tip}</p>
+                  </div>
+                  <div className="p-4 bg-zinc-50 rounded-[24px] border border-zinc-100/50">
+                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1 lowercase">Market Probability</p>
+                     <p className="text-xs font-black text-primary leading-tight">{tip.odds}</p>
+                  </div>
+               </div>
+
+               <div className="flex items-center gap-3 pt-4 border-t border-zinc-100/50">
+                  <div className="flex-1 flex gap-2">
+                     <StatusIcon active={tip.status === 'won'} color="win" icon={CheckCircle2} onClick={() => updateStatus(tip.id, 'won')} />
+                     <StatusIcon active={tip.status === 'lost'} color="lost" icon={XCircle} onClick={() => updateStatus(tip.id, 'lost')} />
+                     <StatusIcon active={tip.status === 'pending'} color="zinc" icon={Clock} onClick={() => updateStatus(tip.id, 'pending')} />
+                  </div>
+                  <button 
+                    onClick={() => deleteTip(tip.id)}
+                    className="w-11 h-11 bg-red-50 text-red-300 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                  >
+                     <Trash2 className="w-4 h-4" />
+                  </button>
+               </div>
+            </motion.div>
+         ))}
+      </div>
+
       <AnimatePresence>
         {isAdding && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -199,256 +309,227 @@ export default function AdminTips() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-[#F0F9F8]/90 backdrop-blur-md"
               onClick={() => setIsAdding(false)}
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 40 }}
-              className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl p-10 overflow-y-auto max-h-[90vh] custom-scrollbar"
+              className="relative w-full max-w-4xl bg-white rounded-[56px] shadow-2xl border border-[#E9ECEF] flex flex-col max-h-[90vh] overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-10">
-                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                       <Plus className="w-6 h-6 text-primary" />
+              <div className="p-10 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/30">
+                 <div className="flex items-center gap-5">
+                    <div className="w-16 h-16 bg-primary/10 rounded-[28px] flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
+                       <Sparkles className="w-8 h-8 text-primary" />
                     </div>
                     <div>
-                       <h4 className="text-2xl font-black italic lowercase tracking-tight">craft new prediction</h4>
-                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">enter data for global distribution</p>
+                       <h4 className="text-3xl font-black italic lowercase tracking-tight">Forge Tip</h4>
+                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] lowercase">Input matrix parameters</p>
                     </div>
                  </div>
-                 <button onClick={() => setIsAdding(false)} className="p-3 bg-[#F8F9FA] rounded-[18px] hover:bg-[#E9ECEF] transition-all">
-                    <XCircle className="w-5 h-5 text-zinc-400" />
+                 <button onClick={() => setIsAdding(false)} className="w-12 h-12 bg-white border border-zinc-200 rounded-[20px] flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-all active:scale-90 shadow-sm">
+                    <XCircle className="w-6 h-6" />
                  </button>
               </div>
 
-              <form className="space-y-8" onSubmit={handleAddTip}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className="space-y-2">
-                     <AdminInput 
-                       label="Home Team" 
-                       placeholder="Arsenal" 
-                       value={formData.homeTeam} 
-                       onChange={(e: any) => setFormData({...formData, homeTeam: e.target.value})}
-                       onBlur={() => handleLogoFetch('home', formData.homeTeam)}
-                     />
-                     {logoLoading.home && <p className="text-[8px] font-bold text-primary animate-pulse ml-2">searching logo...</p>}
-                   </div>
-                   <div className="space-y-2">
-                     <AdminInput 
-                       label="Away Team" 
-                       placeholder="Man City" 
-                       value={formData.awayTeam}
-                       onChange={(e: any) => setFormData({...formData, awayTeam: e.target.value})}
-                       onBlur={() => handleLogoFetch('away', formData.awayTeam)}
-                     />
-                     {logoLoading.away && <p className="text-[8px] font-bold text-primary animate-pulse ml-2">searching logo...</p>}
-                   </div>
-                   
-                   <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-center gap-4">
-                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2 shadow-sm">
-                            {formData.homeLogo ? <img src={formData.homeLogo} className="w-full h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-zinc-300" />}
+              <form className="p-10 overflow-y-auto space-y-10 custom-scrollbar" onSubmit={handleAddTip}>
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div className="space-y-6">
+                       <div className="grid grid-cols-2 gap-4">
+                          <TeamInput 
+                            label="Home Faction" 
+                            value={formData.homeTeam} 
+                            placeholder="Home Team"
+                            logo={formData.homeLogo}
+                            loading={logoLoading.home}
+                            onChange={(e: any) => setFormData({...formData, homeTeam: e.target.value})}
+                            onBlur={() => handleLogoFetch('home', formData.homeTeam)}
+                          />
+                          <TeamInput 
+                            label="Away Faction" 
+                            value={formData.awayTeam} 
+                            placeholder="Away Team"
+                            logo={formData.awayLogo}
+                            loading={logoLoading.away}
+                            onChange={(e: any) => setFormData({...formData, awayTeam: e.target.value})}
+                            onBlur={() => handleLogoFetch('away', formData.awayTeam)}
+                          />
+                       </div>
+
+                       <div className="space-y-2">
+                         <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Competition Area</label>
+                         <div className="relative group">
+                            <input 
+                              placeholder="Premier League"
+                              value={formData.league}
+                              onChange={(e) => setFormData({...formData, league: e.target.value})}
+                              onBlur={() => handleLeagueLogoFetch(formData.league)}
+                              className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-14 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
+                            />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1.5 border border-zinc-100">
+                               {logoLoading.league ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : (
+                                 <img src={formData.leagueLogo || 'https://via.placeholder.com/50'} className="w-full h-full object-contain" />
+                               )}
+                            </div>
                          </div>
-                         <p className="text-[10px] font-black text-zinc-400 uppercase">Home Logo Extracted</p>
-                      </div>
-                      <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex items-center gap-4">
-                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2 shadow-sm">
-                            {formData.awayLogo ? <img src={formData.awayLogo} className="w-full h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-zinc-300" />}
-                         </div>
-                         <p className="text-[10px] font-black text-zinc-400 uppercase">Away Logo Extracted</p>
-                      </div>
-                   </div>
+                       </div>
+                    </div>
 
-                   <AdminInput 
-                     label="League" 
-                     placeholder="Premier League" 
-                     value={formData.league}
-                     onChange={(e: any) => setFormData({...formData, league: e.target.value})}
-                   />
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Market Category</label>
-                     <select 
-                       value={formData.category}
-                       onChange={(e) => setFormData({...formData, category: e.target.value})}
-                       className="w-full h-14 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl px-4 text-sm font-black lowercase tracking-tight outline-none focus:ring-2 focus:ring-primary/20"
-                     >
-                        {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                     </select>
-                   </div>
-                   <AdminInput 
-                     label="Odds" 
-                     placeholder="1.95" 
-                     icon={TrendingUp} 
-                     value={formData.odds}
-                     onChange={(e: any) => setFormData({...formData, odds: e.target.value})}
-                   />
-                   <AdminInput 
-                     label="Tip / Selection" 
-                     placeholder="Over 2.5 Goals" 
-                     icon={CheckCircle2} 
-                     value={formData.tip}
-                     onChange={(e: any) => setFormData({...formData, tip: e.target.value})}
-                   />
-                   <AdminInput 
-                     label="Match Date" 
-                     type="date" 
-                     icon={Clock} 
-                     value={formData.date}
-                     onChange={(e: any) => setFormData({...formData, date: e.target.value})}
-                   />
-                   <AdminInput 
-                     label="Match Time" 
-                     type="time" 
-                     icon={Clock} 
-                     value={formData.time}
-                     onChange={(e: any) => setFormData({...formData, time: e.target.value})}
-                   />
-                </div>
+                    <div className="space-y-6">
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Market Vector</label>
+                             <select 
+                               value={formData.category}
+                               onChange={(e) => setFormData({...formData, category: e.target.value})}
+                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                             >
+                               {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                             </select>
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Probability (Odds)</label>
+                             <div className="relative">
+                               <TrendingUp className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                               <input 
+                                 placeholder="1.95"
+                                 value={formData.odds}
+                                 onChange={(e) => setFormData({...formData, odds: e.target.value})}
+                                 className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-12 text-sm font-black outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
+                               />
+                             </div>
+                          </div>
+                       </div>
 
-                <div className="flex items-center gap-6 p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
-                   <label className="flex items-center gap-3 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        className="w-5 h-5 rounded-lg accent-primary" 
-                        checked={formData.isVip}
-                        onChange={(e) => setFormData({...formData, isVip: e.target.checked})}
-                      />
-                      <span className="text-xs font-black lowercase tracking-tight">Highlight as VIP Tip</span>
-                   </label>
-                </div>
+                       <div className="space-y-2">
+                          <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Selected Outcome</label>
+                          <div className="relative">
+                             <CheckCircle2 className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                             <input 
+                               placeholder="Both Teams To Score"
+                               value={formData.tip}
+                               onChange={(e) => setFormData({...formData, tip: e.target.value})}
+                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-12 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
+                             />
+                          </div>
+                       </div>
 
-                <button 
-                  disabled={isSubmitting}
-                  className="w-full h-16 bg-premium-gradient text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-98 transition-all flex items-center justify-center gap-3 mt-6 disabled:opacity-50"
-                >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                  finalize and distribute
-                </button>
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Temporal Date</label>
+                             <input 
+                               type="date"
+                               value={formData.date}
+                               onChange={(e) => setFormData({...formData, date: e.target.value})}
+                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-sm font-black outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                             />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Temporal Time</label>
+                             <input 
+                               type="time"
+                               value={formData.time}
+                               onChange={(e) => setFormData({...formData, time: e.target.value})}
+                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-sm font-black outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                             />
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="flex flex-col md:flex-row items-center justify-between gap-10 pt-10 border-t border-zinc-100">
+                    <div className="flex items-center gap-6">
+                       <label className="flex items-center gap-3 cursor-pointer group">
+                          <div className={cn(
+                            "w-12 h-6 rounded-full relative transition-all duration-300",
+                            formData.isVip ? "bg-primary" : "bg-zinc-200"
+                          )}>
+                             <input 
+                               type="checkbox" 
+                               className="hidden" 
+                               checked={formData.isVip} 
+                               onChange={(e) => setFormData({...formData, isVip: e.target.checked})} 
+                             />
+                             <div className={cn(
+                               "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
+                               formData.isVip ? "left-7" : "left-1"
+                             )} />
+                          </div>
+                          <span className="text-xs font-black lowercase tracking-tight text-zinc-600">VIP Access Priority</span>
+                       </label>
+                    </div>
+
+                    <button 
+                      disabled={isSubmitting}
+                      className="w-full md:w-auto h-20 px-16 bg-premium-gradient text-white rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 hover:scale-[1.03] active:scale-97 transition-all flex items-center justify-center gap-4 disabled:opacity-50"
+                    >
+                       {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6" />}
+                       Finalize Injection
+                    </button>
+                 </div>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
-      {/* Tips List */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-10">
-         {loading ? (
-            <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-300 gap-4">
-               <Loader2 className="w-10 h-10 animate-spin" />
-               <p className="text-xs font-black uppercase tracking-widest">syncing with matrix...</p>
-            </div>
-         ) : filteredTips.length === 0 ? (
-            <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-300 gap-4">
-               <Trophy className="w-12 h-12 opacity-20" />
-               <p className="text-xs font-black uppercase tracking-widest">no tips found in this sector</p>
-            </div>
-         ) : filteredTips.map((tip) => (
-           <motion.div 
-             key={tip.id}
-             layout
-             className="p-8 bg-white border border-[#E9ECEF] rounded-[40px] hover:shadow-2xl transition-all group"
-           >
-              <div className="flex items-center justify-between mb-8">
-                 <div className="flex items-center gap-4">
-                    <div className="flex -space-x-4">
-                       <div className="w-12 h-12 bg-[#F8F9FA] rounded-2xl border-4 border-white flex items-center justify-center p-2">
-                          <img src={tip.homeLogo || 'https://via.placeholder.com/150'} alt={tip.homeTeam} className="w-full h-full object-contain" />
-                       </div>
-                       <div className="w-12 h-12 bg-[#F8F9FA] rounded-2xl border-4 border-white flex items-center justify-center p-2">
-                          <img src={tip.awayLogo || 'https://via.placeholder.com/150'} alt={tip.awayTeam} className="w-full h-full object-contain" />
-                       </div>
-                    </div>
-                    <div>
-                       <h4 className="text-lg font-black lowercase tracking-tighter leading-none italic">{tip.homeTeam} vs {tip.awayTeam}</h4>
-                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">{tip.league}</p>
-                    </div>
-                 </div>
-                 <div className={cn(
-                   "px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest lowercase flex items-center gap-2",
-                   tip.status === 'won' ? "bg-win/10 text-win" : tip.status === 'lost' ? "bg-red-100 text-red-500" : "bg-zinc-100 text-zinc-400"
-                 )}>
-                    {tip.status === 'won' ? <CheckCircle2 className="w-3 h-3" /> : tip.status === 'lost' ? <XCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                    {tip.status}
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-6 bg-[#F8F9FA] p-6 rounded-[24px] mb-8">
-                 <div className="space-y-1 text-center">
-                    <p className="text-[8px] font-black text-zinc-300 uppercase tracking-widest lowercase">Selection</p>
-                    <p className="text-sm font-black text-zinc-900 lowercase tracking-tight">{tip.tip}</p>
-                 </div>
-                 <div className="space-y-1 text-center border-x border-zinc-200">
-                    <p className="text-[8px] font-black text-zinc-300 uppercase tracking-widest lowercase">Odds</p>
-                    <p className="text-sm font-black text-primary tracking-tight">{tip.odds}</p>
-                 </div>
-                 <div className="space-y-1 text-center">
-                    <p className="text-[8px] font-black text-zinc-300 uppercase tracking-widest lowercase">Market</p>
-                    <p className="text-sm font-black text-zinc-900 lowercase tracking-tight">
-                      {CATEGORIES.find(c => c.id === tip.category)?.label || tip.category}
-                    </p>
-                 </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                 <div className="flex-1 flex items-center gap-2">
-                    <button 
-                      onClick={() => updateStatus(tip.id, 'won')}
-                      className={cn(
-                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-all",
-                        tip.status === 'won' ? "bg-win text-white shadow-lg shadow-win/20" : "bg-win/10 text-win hover:bg-win hover:text-white"
-                      )}
-                    >
-                       <CheckCircle2 className="w-5 h-5" />
-                    </button>
-                    <button 
-                      onClick={() => updateStatus(tip.id, 'lost')}
-                      className={cn(
-                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-all",
-                        tip.status === 'lost' ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-red-100 text-red-500 hover:bg-red-500 hover:text-white"
-                      )}
-                    >
-                       <XCircle className="w-5 h-5" />
-                    </button>
-                    <button 
-                      onClick={() => updateStatus(tip.id, 'pending')}
-                      className={cn(
-                        "h-12 w-12 rounded-2xl flex items-center justify-center transition-all",
-                        tip.status === 'pending' ? "bg-zinc-900 text-white shadow-lg shadow-black/20" : "bg-zinc-100 text-zinc-400 hover:bg-zinc-900 hover:text-white"
-                      )}
-                    >
-                       <Clock className="w-5 h-5" />
-                    </button>
-                 </div>
-                 <button 
-                   onClick={() => deleteTip(tip.id)}
-                   className="h-12 w-12 bg-red-50 text-red-300 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
-                 >
-                    <Trash2 className="w-5 h-5" />
-                 </button>
-              </div>
-           </motion.div>
-         ))}
-      </div>
     </div>
   );
 }
 
-function AdminInput({ label, icon: Icon, onBlur, ...props }: any) {
+function FilterButton({ children, active, onClick }: any) {
   return (
-    <div className="space-y-2 group">
-      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">{label}</label>
+    <button
+      onClick={onClick}
+      className={cn(
+        "h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2.5 outline-none whitespace-nowrap lowercase",
+        active 
+          ? "bg-[#103D39] text-primary shadow-xl shadow-primary/10 border-b-2 border-primary" 
+          : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-zinc-50"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatusIcon({ active, color, icon: Icon, onClick }: any) {
+  const colors: any = {
+    win: active ? "bg-win text-white" : "bg-win/10 text-win",
+    lost: active ? "bg-red-500 text-white" : "bg-red-50 text-red-500",
+    zinc: active ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-400"
+  };
+  
+  return (
+    <button 
+      onClick={onClick}
+      className={cn(
+        "w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-90",
+        colors[color]
+      )}
+    >
+       <Icon className="w-4 h-4" />
+    </button>
+  );
+}
+
+function TeamInput({ label, value, onChange, onBlur, placeholder, logo, loading }: any) {
+  return (
+    <div className="space-y-2 group flex-1">
+      <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">{label}</label>
       <div className="relative">
-        {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-primary transition-colors" />}
-        <input 
-          {...props}
-          onBlur={onBlur}
-          className={cn(
-            "w-full h-14 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl px-6 text-sm font-black placeholder:text-zinc-200 outline-none focus:ring-2 focus:ring-primary/20 transition-all",
-            Icon && "pl-12"
-          )}
-        />
+         <div className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 border border-zinc-100">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : (
+              logo ? <img src={logo} className="w-full h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-zinc-200" />
+            )}
+         </div>
+         <input 
+           value={value}
+           onChange={onChange}
+           onBlur={onBlur}
+           placeholder={placeholder}
+           className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] pl-16 pr-6 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
+         />
       </div>
     </div>
   );

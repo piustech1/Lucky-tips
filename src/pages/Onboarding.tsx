@@ -29,8 +29,8 @@ export default function Onboarding() {
             className="w-full h-1/3 rounded-2xl overflow-hidden border border-white/10"
           >
             <img 
-              src="https://picsum.photos/seed/messi_win/800/400" 
-              alt="Winner" 
+              src="https://assets-us-01.kc-usercontent.com/31dbcbc6-da4c-0033-328a-d7621d0fa726/56bf515e-bed6-41b3-a23a-dff3c3322e5d/2025-11-09T183209Z_199547535_UP1ELB91BCT38_RTRMADP_3_SOCCER-ENGLAND-MCI-LIV.JPG?ver=03-06-2025?w=3840&q=75" 
+              alt="Match Action" 
               className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700"
               referrerPolicy="no-referrer"
             />
@@ -42,8 +42,8 @@ export default function Onboarding() {
             className="w-full h-1/3 rounded-2xl overflow-hidden border border-white/10"
           >
             <img 
-              src="https://picsum.photos/seed/soccer_passion/800/400" 
-              alt="Passion" 
+              src="https://content-cdn.tribuna.uz/20260414/bbe5431245064703b675ee91ebdacf5b7dff4d602a62917097b421ca0aa90a2e-1200-675.webp" 
+              alt="Stadium Passion" 
               className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700"
               referrerPolicy="no-referrer"
             />
@@ -55,8 +55,8 @@ export default function Onboarding() {
             className="w-full h-1/3 rounded-2xl overflow-hidden border border-white/10"
           >
             <img 
-              src="https://picsum.photos/seed/victory_goal/800/400" 
-              alt="Victory" 
+              src="https://www.arsenal.com/sites/default/files/styles/desktop_16x9/public/images/GettyImages-2187028428%20Cropped_ir3r79ux.jpg?h=b78fcb49&auto=webp&itok=OPOwBMt8" 
+              alt="Victory Goal" 
               className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700"
               referrerPolicy="no-referrer"
             />

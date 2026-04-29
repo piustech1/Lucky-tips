@@ -156,7 +156,7 @@ export default function AdminUsers() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-zinc-100 overflow-hidden border border-zinc-200">
-                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.displayName || user.email}`} alt={user.displayName} />
+                         <img src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.displayName || user.email}`} alt={user.displayName} className="w-full h-full object-cover" />
                       </div>
                       <div>
                         <h4 className="font-black text-[#1A1A1A] text-lg lowercase tracking-tighter leading-none mb-1 truncate max-w-[120px]">{user.displayName || 'No Name'}</h4>

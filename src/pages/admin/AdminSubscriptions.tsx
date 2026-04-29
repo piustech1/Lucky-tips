@@ -3,18 +3,38 @@ import {
   Wallet, DollarSign, ArrowUpRight, 
   Search, Filter, CheckCircle2, 
   XCircle, Clock, MoreVertical,
-  Target, Zap, Shield
+  Target, Zap, Shield, Loader2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
-
-const MOCK_SUBS = [
-  { id: '1', user: 'Pius Tech', plan: 'VIP Lifetime', amount: '$499.00', status: 'active', date: '2024-04-20', expires: '2099-12-31' },
-  { id: '2', user: 'Mark Zulu', plan: 'VIP Monthly', amount: '$29.00', status: 'pending', date: '2024-04-27', expires: '2024-05-27' },
-  { id: '3', user: 'Sarah Doe', plan: 'VIP Weekly', amount: '$9.00', status: 'expired', date: '2024-03-15', expires: '2024-03-22' }
-];
+import { rtdb } from '../../lib/firebase';
+import { ref, onValue } from 'firebase/database';
+import { format } from 'date-fns';
 
 export default function AdminSubscriptions() {
+  const [subs, setSubs] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  React.useEffect(() => {
+    const usersRef = ref(rtdb, 'users');
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const users = Object.values(data) as any[];
+      // Filter for VIP users
+      const vipUsers = users.filter((u: any) => u.subscriptionTier === 'vip' || u.isVip);
+      setSubs(vipUsers);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const filteredSubs = subs.filter(s => 
+    (s.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
@@ -27,7 +47,9 @@ export default function AdminSubscriptions() {
            <div className="relative group flex-1 min-w-[240px]">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
               <input 
-                placeholder="Search by transaction ID or user..."
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full h-12 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl pl-12 pr-4 text-xs font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all"
               />
            </div>
@@ -36,20 +58,34 @@ export default function AdminSubscriptions() {
 
       {/* Subscription Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {MOCK_SUBS.map((sub) => (
+        {loading ? (
+             Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-72 bg-zinc-100 rounded-[40px] animate-pulse" />
+             ))
+        ) : filteredSubs.length === 0 ? (
+             <div className="col-span-full py-20 text-center text-zinc-300 gap-4 flex flex-col items-center">
+                <Shield className="w-12 h-12 opacity-10" />
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] lowercase">No active VIP agents found</p>
+             </div>
+        ) : filteredSubs.map((sub: any) => (
           <motion.div 
-            key={sub.id}
-            className="bg-white p-8 rounded-[40px] border border-[#E9ECEF] flex flex-col justify-between group hover:shadow-2xl transition-all"
+            key={sub.uid || sub.email}
+            layout
+            className="bg-white p-8 rounded-[40px] border border-[#E9ECEF] flex flex-col justify-between group hover:shadow-2xl transition-all h-full"
           >
             <div className="space-y-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                   <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100">
-                      <Shield className="w-6 h-6 text-primary" />
+                   <div className="w-14 h-14 rounded-2xl bg-zinc-50 flex items-center justify-center border border-zinc-100 overflow-hidden shadow-sm">
+                      <img 
+                        src={sub.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${sub.email}`} 
+                        alt={sub.displayName}
+                        className="w-full h-full object-cover" 
+                      />
                    </div>
-                   <div>
-                      <h4 className="font-black text-lg lowercase tracking-tighter leading-none mb-1">{sub.user}</h4>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">{sub.plan}</p>
+                   <div className="min-w-0">
+                      <h4 className="font-black text-lg lowercase tracking-tighter leading-none mb-1 truncate">{sub.displayName || 'VIP Pilot'}</h4>
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase truncate">{sub.email}</p>
                    </div>
                 </div>
                 <button className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
@@ -57,35 +93,31 @@ export default function AdminSubscriptions() {
                 </button>
               </div>
 
-              <div className="p-6 bg-[#F8F9FA] rounded-[24px] space-y-4">
+              <div className="p-6 bg-[#F8F9FA] rounded-[32px] space-y-4 border border-zinc-100/50">
                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase">Revenue</span>
-                    <span className="text-sm font-black text-zinc-900 tracking-tight">{sub.amount}</span>
+                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase">Matrix Level</span>
+                    <span className="text-xs font-black text-primary tracking-tight">VIP {sub.subscriptionTier || 'Tier'}</span>
                  </div>
                  <div className="flex justify-between items-center">
                     <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase">Status</span>
                     <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest lowercase px-2.5 py-0.5 rounded-full",
-                      sub.status === 'active' ? "bg-win/10 text-win" : sub.status === 'pending' ? "bg-amber-100 text-amber-500" : "bg-red-50 text-red-500"
-                    )}>{sub.status}</span>
+                      "text-[9px] font-black uppercase tracking-widest lowercase px-3 py-1 rounded-full bg-win/10 text-win"
+                    )}>Verified</span>
                  </div>
-                 <div className="flex justify-between items-center pt-2 border-t border-zinc-200/50">
-                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase">Expires</span>
-                    <span className="text-[11px] font-black text-zinc-600 tracking-tight">{sub.expires}</span>
+                 <div className="flex justify-between items-center pt-3 border-t border-zinc-200/50">
+                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase">Since</span>
+                    <span className="text-[10px] font-black text-zinc-600 tracking-tight">
+                      {sub.createdAt ? format(new Date(sub.createdAt), 'MMM dd, yyyy') : 'Pre-Launch'}
+                    </span>
                  </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3 mt-8">
-               <button className="flex-1 h-12 bg-zinc-900 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2">
-                  Edit Plan
+               <button className="flex-1 h-14 bg-zinc-900 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2">
+                  Override Profile
                </button>
-               {sub.status === 'pending' && (
-                 <button className="h-12 px-5 bg-win text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-win/20 hover:scale-105 transition-all">
-                    Approve
-                 </button>
-               )}
-               <button className="h-12 w-12 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
+               <button className="h-14 w-14 bg-red-50 text-red-300 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-90">
                   <XCircle className="w-5 h-5" />
                </button>
             </div>

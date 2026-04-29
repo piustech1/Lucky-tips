@@ -39,6 +39,7 @@ import AdminRevenue from './pages/admin/AdminRevenue';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminHistory from './pages/admin/AdminHistory';
+import AdminMarketIntel from './pages/admin/AdminMarketIntel';
 
 function AppContent() {
   const { user, loading, profile } = useUser();
@@ -107,6 +108,7 @@ function AppContent() {
           <Route path="settings" element={<AdminSettings />} />
           <Route path="logs" element={<AdminLogs />} />
           <Route path="history" element={<AdminHistory />} />
+          <Route path="market-intel" element={<AdminMarketIntel />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />

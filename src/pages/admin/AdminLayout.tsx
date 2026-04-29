@@ -15,7 +15,7 @@ const sidebarItems = [
   { icon: Users, label: 'User Hub', path: '/admin/users' },
   { icon: Wallet, label: 'Subscriptions', path: '/admin/subscriptions' },
   { icon: Bell, label: 'Push Alerts', path: '/admin/notifications' },
-  { icon: BarChart3, label: 'Market Intel', path: '/admin/analytics' },
+  { icon: BarChart3, label: 'Market Intel', path: '/admin/market-intel' },
   { icon: FileText, label: 'Revenue', path: '/admin/revenue' },
   { icon: Activity, label: 'System Logs', path: '/admin/logs' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
