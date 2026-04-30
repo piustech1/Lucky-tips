@@ -8,7 +8,7 @@ import { ref, update } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
 import { fetchFromFootballAPI, getActiveKeyIndex, setActiveKeyIndex } from '../../services/apiService';
-import { normalize, saveToFirebase } from '../../services/dbService';
+import { normalize, saveToFirebase, ensureLogosStructure } from '../../services/dbService';
 
 interface League {
   league: {
@@ -62,9 +62,9 @@ export default function AdminLogoManager() {
       });
       setSuccess('Logo cache cleared and rebuilt safely');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[LogoManager] Delete failed:', err);
-      setError('Failed to purge cache safely. Check Firebase rules.');
+      setError(`Failed to purge cache: ${err.message || 'Check connection'}. Update Firebase rules if permissions are denied.`);
     } finally {
       setIsDeleting(false);
     }
@@ -115,6 +115,9 @@ export default function AdminLogoManager() {
     setIsSaving(true);
     setError(null);
     try {
+      // Re-initialize structure if missing
+      await ensureLogosStructure();
+      
       const updates: any = {};
       
       // Map all leagues to updates using normalized names as keys
@@ -150,9 +153,9 @@ export default function AdminLogoManager() {
 
       setSuccess('All logos synchronized successfully with terminal');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[LogoManager] Save Error:', err);
-      setError('Failed to sync logos with firebase. Check console for details.');
+      setError(`Failed to sync logos: ${err.message || 'Check connection'}. Update Firebase rules if permissions are denied.`);
     } finally {
       setIsSaving(false);
     }

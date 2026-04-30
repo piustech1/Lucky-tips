@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Trophy, Plus, Search, Filter, 
   Trash2, Edit2, Clock, Globe, 
-  TrendingUp, CheckCircle2, XCircle, 
+  TrendingUp, CheckCircle2, XCircle, AlertCircle,
   ChevronRight, LayoutGrid, Image as ImageIcon,
   DollarSign, Hash, Loader2, Sparkles, Zap
 } from 'lucide-react';
@@ -86,7 +86,8 @@ export default function AdminTips() {
     const initializeAdmin = async () => {
       try {
         console.log('[AdminTips] Starting system boot...');
-        setIsInitializing(true);
+        // We don't block the UI with isInitializing anymore if we have previous data
+        // but we'll keep it for the first load to ensure structure
         setError(null);
 
         // Auto-recovery: Recreate logos if missing
@@ -94,21 +95,24 @@ export default function AdminTips() {
 
         const logosRef = ref(rtdb, 'logos');
         const snapshot = await get(logosRef);
-        const data = snapshot.val() || { teams: {}, leagues: {} };
         
-        console.log('[AdminTips] Matrix data received:', data);
-        
-        // Safe mapping with Object.values and handling missing properties
-        const teams = data.teams ? Object.values(data.teams) : [];
-        const leagues = data.leagues ? Object.values(data.leagues) : [];
-        
-        setCachedTeams(teams);
-        setCachedLeagues(leagues);
-      } catch (err) {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          console.log('[AdminTips] Matrix data received:', data);
+          
+          const teams = data.teams ? Object.values(data.teams) : [];
+          const leagues = data.leagues ? Object.values(data.leagues) : [];
+          
+          setCachedTeams(teams);
+          setCachedLeagues(leagues);
+        }
+      } catch (err: any) {
         console.error('[AdminTips] Boot sequence failed:', err);
-        setError('Database connection error. Check your credentials or quota.');
+        // We set a non-blocking error message
+        setError(`Database Warning: ${err.message || 'Partial connection'}. You can still add tips manually.`);
       } finally {
         setIsInitializing(false);
+        setLoading(false);
       }
     };
 
@@ -132,10 +136,8 @@ export default function AdminTips() {
       } catch (err) {
         console.error('[AdminTips] Prediction sync error:', err);
       }
-      setLoading(false);
     }, (err) => {
       console.error('[AdminTips] Subscription error:', err);
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -177,9 +179,10 @@ export default function AdminTips() {
         isVip: false,
         status: 'pending'
       });
-    } catch (error) {
-       console.error('[AdminTips] Submission failed:', error);
-       handleFirestoreError(error, OperationType.WRITE, 'predictions');
+    } catch (err: any) {
+       console.error('[AdminTips] Submission failed:', err);
+       setError(`Failed to add tip: ${err.message}`);
+       handleFirestoreError(err, OperationType.WRITE, 'predictions');
     } finally {
       setIsSubmitting(false);
     }
@@ -192,24 +195,6 @@ export default function AdminTips() {
         <div className="text-center">
           <p className="text-sm font-black lowercase tracking-tight">Accessing terminal matrix...</p>
           <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Fetching stored logo data</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="h-[70vh] flex flex-col items-center justify-center gap-6 p-10 bg-red-50 rounded-[40px] border border-red-100 italic">
-        <AlertCircle className="w-12 h-12 text-red-500" />
-        <div className="text-center">
-          <p className="font-black lowercase text-xl">System Failure</p>
-          <p className="text-sm text-red-600 mt-2 font-medium">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-6 px-8 h-12 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all"
-          >
-            Reboot Matrix
-          </button>
         </div>
       </div>
     );
@@ -243,6 +228,27 @@ export default function AdminTips() {
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <AnimatePresence>
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-6 bg-red-50 border border-red-100 rounded-[32px] flex items-center gap-4 text-red-600 italic"
+          >
+            <AlertCircle className="w-6 h-6 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-black lowercase tracking-tight">System Alert: {error}</p>
+            </div>
+            <button 
+              onClick={() => setError(null)}
+              className="text-[10px] font-black uppercase tracking-widest hover:underline"
+            >
+              Dismiss
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Dynamic Header */}
       <div className="relative p-10 bg-zinc-900 rounded-[56px] overflow-hidden group shadow-2xl">
          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/20 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse" />
