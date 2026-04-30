@@ -4,9 +4,16 @@ import { rtdb } from '../lib/firebase';
 const PLACEHOLDER = 'https://via.placeholder.com/150?text=No+Logo';
 
 /**
- * Normalizes names for database keys
+ * Normalizes names for database keys (Stripping invalid Firebase characters)
  */
-export const normalize = (name: string) => name ? name.toLowerCase().trim() : '';
+export const normalizeKey = (name: string) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[.#$\/\[\]]/g, '') // Remove invalid chars: . # $ / [ ]
+    .replace(/\s+/g, '_');      // Replace spaces with underscore
+};
 
 /**
  * Safe write to Firebase with error handling
@@ -27,9 +34,9 @@ export async function saveToFirebase(path: string, data: any) {
  */
 export async function getTeamLogoFromDb(name: string): Promise<string> {
   if (!name) return PLACEHOLDER;
-  const normalizedName = normalize(name);
+  const key = normalizeKey(name);
   try {
-    const snapshot = await get(child(ref(rtdb), `logos/teams/${normalizedName}`));
+    const snapshot = await get(child(ref(rtdb), `logos/teams/${key}`));
     if (snapshot.exists()) {
       return snapshot.val().logo || PLACEHOLDER;
     }
@@ -44,9 +51,9 @@ export async function getTeamLogoFromDb(name: string): Promise<string> {
  */
 export async function getLeagueLogoFromDb(name: string): Promise<string> {
   if (!name) return PLACEHOLDER;
-  const normalizedName = normalize(name);
+  const key = normalizeKey(name);
   try {
-    const snapshot = await get(child(ref(rtdb), `logos/leagues/${normalizedName}`));
+    const snapshot = await get(child(ref(rtdb), `logos/leagues/${key}`));
     if (snapshot.exists()) {
       return snapshot.val().logo || PLACEHOLDER;
     }

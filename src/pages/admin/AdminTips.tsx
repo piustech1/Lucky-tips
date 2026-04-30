@@ -22,7 +22,7 @@ import {
 } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
-import { normalize, ensureLogosStructure } from '../../services/dbService';
+import { normalizeKey, ensureLogosStructure } from '../../services/dbService';
 
 const CATEGORIES = [
   { id: 'free', label: 'Free Tips', icon: Sparkles },
@@ -53,6 +53,7 @@ function TargetIcon(props: any) {
 }
 
 export default function AdminTips() {
+  console.log('[AdminTips] Rendering component...');
   const [tips, setTips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -227,7 +228,7 @@ export default function AdminTips() {
   const filteredTips = filter === 'all' ? tips : tips.filter(t => t.category === filter);
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-10 pb-20">
       <AnimatePresence>
         {error && (
           <motion.div 
@@ -270,7 +271,10 @@ export default function AdminTips() {
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setIsAdding(true)}
+              onClick={() => {
+                console.log('[AdminTips] Opening Craft Match Tip modal...');
+                setIsAdding(true);
+              }}
               className="h-16 px-10 bg-primary text-[#103D39] rounded-[24px] text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/30 flex items-center gap-3 group/btn"
             >
               <Plus className="w-5 h-5 transition-transform group-hover/btn:rotate-90" />
@@ -595,7 +599,9 @@ function SearchableDropdown({ label, items, value, logo, onSelect }: { label: st
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  const filteredItems = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).slice(0, 50);
+  const filteredItems = (items || []).filter(i => 
+    i && i.name && i.name.toLowerCase().includes((search || '').toLowerCase())
+  ).slice(0, 50);
 
   return (
     <div className="space-y-2 group flex-1 relative">

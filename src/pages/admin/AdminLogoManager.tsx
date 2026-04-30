@@ -8,7 +8,7 @@ import { ref, update } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
 import { fetchFromFootballAPI, getActiveKeyIndex, setActiveKeyIndex } from '../../services/apiService';
-import { normalize, saveToFirebase, ensureLogosStructure } from '../../services/dbService';
+import { normalizeKey, saveToFirebase, ensureLogosStructure } from '../../services/dbService';
 
 interface League {
   league: {
@@ -110,19 +110,24 @@ export default function AdminLogoManager() {
     }
   };
 
-  const saveAllLogos = async () => {
-    console.log('[LogoManager] Bulk saving logos...');
+  const saveAllLogos = async (forceRepair = false) => {
+    console.log(`[LogoManager] Bulk saving logos (repair=${forceRepair})...`);
     setIsSaving(true);
     setError(null);
     try {
+      if (forceRepair) {
+        console.log('[LogoManager] Force repairing structure...');
+        await saveToFirebase('logos', { teams: {}, leagues: {} });
+      }
+
       // Re-initialize structure if missing
       await ensureLogosStructure();
       
       const updates: any = {};
       
-      // Map all leagues to updates using normalized names as keys
+      // Map all leagues to updates using normalized keys
       leagues.forEach(l => {
-        const key = normalize(l.league.name);
+        const key = normalizeKey(l.league.name);
         if (key) {
           updates[`leagues/${key}`] = {
             name: l.league.name,
@@ -131,9 +136,9 @@ export default function AdminLogoManager() {
         }
       });
 
-      // Map all loaded teams to updates using normalized names as keys
+      // Map all loaded teams to updates using normalized keys
       teams.forEach(t => {
-        const key = normalize(t.team.name);
+        const key = normalizeKey(t.team.name);
         if (key) {
           updates[`teams/${key}`] = {
             name: t.team.name,
@@ -145,17 +150,25 @@ export default function AdminLogoManager() {
 
       // Perform bulk update on logos node
       if (Object.keys(updates).length > 0) {
+        console.log(`[LogoManager] Synchronizing ${Object.keys(updates).length} keys...`);
         await update(ref(rtdb, 'logos'), updates);
         console.log('[LogoManager] Bulk save successful');
       } else {
         console.warn('[LogoManager] No data to save');
       }
 
-      setSuccess('All logos synchronized successfully with terminal');
+      setSuccess(forceRepair ? 'Node repaired and synchronized' : 'All logos synchronized successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       console.error('[LogoManager] Save Error:', err);
-      setError(`Failed to sync logos: ${err.message || 'Check connection'}. Update Firebase rules if permissions are denied.`);
+      // Construct a very detailed error message
+      let msg = 'Failed to sync.';
+      if (err.message) {
+        if (err.message.includes('PERMISSION_DENIED')) msg += ' Access Denied. Check Firebase Rules.';
+        else if (err.message.includes('invalid key')) msg += ' Invalid Key Error. Using repair might fix this.';
+        else msg += ` ${err.message}`;
+      }
+      setError(msg);
     } finally {
       setIsSaving(false);
     }
@@ -178,8 +191,15 @@ export default function AdminLogoManager() {
             delete all logos
           </button>
           <button 
-            onClick={saveAllLogos}
-            disabled={isSaving || (leagues.length === 0 && teams.length === 0)}
+            onClick={() => saveAllLogos(true)}
+            disabled={isSaving || isDeleting}
+            className="h-16 px-8 bg-zinc-100 text-zinc-500 rounded-[32px] font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-amber-50 hover:text-amber-600 transition-all disabled:opacity-50"
+          >
+            <Shield className="w-4 h-4" />
+            repair & sync
+          </button>
+          <button 
+            onClick={() => saveAllLogos(false)}
             className="h-16 px-10 bg-premium-gradient text-white rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
