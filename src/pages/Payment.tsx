@@ -29,6 +29,7 @@ export default function Payment() {
     
     try {
       // 1. Call Backend to initiate MarzPay collection
+      console.log("=== INITIATING PAYMENT ===");
       const response = await fetch('/api/collect-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,14 +52,17 @@ export default function Payment() {
         throw new Error('Server returned an invalid response. Please try again later.');
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || data.details?.error || 'Failed to initiate payment');
+      console.log("Server response:", data);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.message || 'Failed to initiate payment');
       }
 
-      setTransactionRef(data.reference);
+      const reference = data.reference;
+      setTransactionRef(reference);
 
       // 2. Record pending payment in RTDB
-      const paymentRef = ref(rtdb, `payments/${data.reference}`);
+      const paymentRef = ref(rtdb, `payments/${reference}`);
       await set(paymentRef, {
         userId: profile?.uid || 'anonymous',
         userName: profile?.displayName || 'Anonymous User',
@@ -68,7 +72,7 @@ export default function Payment() {
         packageName: pkgName,
         phoneNumber: localPhone,
         provider: provider,
-        reference: data.reference,
+        reference: reference,
         timestamp: serverTimestamp(),
         status: 'pending',
         currency: 'UGX'
@@ -78,7 +82,7 @@ export default function Payment() {
       setLoading(false);
       
       // Tell user to check phone for PIN prompt
-      alert('Request success! please check your phone now. a mobile money prompt will appear shortly. enter your secret pin to confirm payment.');
+      alert('Request success! Please check your phone now. a mobile money prompt will appear shortly. Enter your secret PIN to confirm payment.');
       
     } catch (error) {
       console.error('Payment Error:', error);
