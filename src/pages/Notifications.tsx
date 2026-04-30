@@ -87,7 +87,7 @@ export default function Notifications() {
     <div className="space-y-8 pb-10">
       <div className="flex items-center justify-between px-4">
         <div className="space-y-0.5">
-          <h2 className="text-3xl font-black tracking-tight text-zinc-900 leading-none lowercase">Alerts Center</h2>
+          <h2 className="text-3xl font-black tracking-tight text-[var(--foreground)] leading-none lowercase">Alerts Center</h2>
           <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] lowercase">Stay ahead of the game</p>
         </div>
         <div className="p-3 bg-zinc-100 rounded-2xl">
@@ -153,7 +153,7 @@ export default function Notifications() {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className={cn("font-black text-[13px] leading-tight lowercase truncate", !item.isRead ? "text-zinc-900" : "text-zinc-500")}>
+                      <h3 className={cn("font-black text-[13px] leading-tight lowercase truncate", !item.isRead ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]")}>
                         {item.title}
                       </h3>
                       <span className="text-[8px] font-bold text-zinc-400 tabular-nums lowercase shrink-0">
@@ -180,7 +180,7 @@ export default function Notifications() {
               <Bell className="w-10 h-10 text-zinc-200" />
             </div>
             <div className="space-y-1">
-               <h4 className="font-black text-zinc-900 lowercase">no alerts yet</h4>
+               <h4 className="font-black text-[var(--foreground)] lowercase">no alerts yet</h4>
                <p className="text-zinc-400 text-xs lowercase">we'll notify you when expert tips are live!</p>
             </div>
           </div>

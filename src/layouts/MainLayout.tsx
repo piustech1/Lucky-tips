@@ -124,7 +124,7 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
         animate={{ scale: 1, opacity: 1 }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        onClick={() => window.open('https://chat.whatsapp.com/H0Wt5wj3odY60J9CWS7TJH?mode=gi_t', '_blank')}
+        onClick={() => window.open('https://wa.me/256709728322', '_blank')}
         className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-2xl shadow-green-500/40 text-white border-2 border-white/20 hover:bg-[#22c35e] transition-colors"
       >
         <MessageSquare className="w-7 h-7" />

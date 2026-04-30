@@ -149,7 +149,7 @@ export default function Home() {
               <div className="shrink-0 p-1.5 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary group-hover:text-white">
                 <cat.icon className="w-4 h-4 text-primary group-hover:text-white" />
               </div>
-              <span className="text-[11px] font-black text-zinc-900 leading-tight lowercase truncate">
+              <span className="text-[11px] font-black text-[var(--foreground)] leading-tight lowercase truncate">
                 {cat.label}
               </span>
             </motion.button>
@@ -238,8 +238,8 @@ export default function Home() {
               )}
             >
               <div className="space-y-0.5 text-left">
-                <h3 className="text-2xl font-black text-zinc-900 leading-none lowercase italic tracking-tight">today's picks</h3>
-                <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] lowercase">live signals</p>
+                <h3 className="text-2xl font-black text-zinc-900 dark:text-white leading-none lowercase italic tracking-tight">today's picks</h3>
+                <p className="text-zinc-500 dark:text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] lowercase">live signals</p>
               </div>
               {activeTab === 'today' && (
                 <motion.div layoutId="tab-underline" className="absolute -bottom-3 left-0 right-0 h-1.5 bg-primary rounded-full" />
@@ -254,8 +254,8 @@ export default function Home() {
               )}
             >
               <div className="space-y-0.5 text-left">
-                <h3 className="text-2xl font-black text-zinc-900 leading-none lowercase italic tracking-tight">previous tips</h3>
-                <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] lowercase">historic archive</p>
+                <h3 className="text-2xl font-black text-zinc-900 dark:text-white leading-none lowercase italic tracking-tight">previous tips</h3>
+                <p className="text-zinc-500 dark:text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] lowercase">historic archive</p>
               </div>
               {activeTab === 'previous' && (
                 <motion.div layoutId="tab-underline" className="absolute -bottom-3 left-0 right-0 h-1.5 bg-secondary rounded-full" />
@@ -297,7 +297,7 @@ export default function Home() {
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-xl font-black lowercase italic tracking-tight text-zinc-900">Analysing Markets...</h4>
+                <h4 className="text-xl font-black lowercase italic tracking-tight text-[var(--foreground)]">Analysing Markets...</h4>
                 <p className="text-[11px] text-zinc-400 font-bold leading-relaxed lowercase tracking-tight max-w-[240px] mx-auto">
                   Our professional analysts are scanning global frequencies for high-probability signals. please bypass shortly for today's elite picks.
                 </p>
@@ -314,40 +314,39 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Responsible Gambling Modal - Refined */}
+      {/* Responsible Gaming Modal - Tooltip Style */}
       <AnimatePresence>
         {showWarning && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-zinc-900/40 backdrop-blur-xl">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/40 backdrop-blur-[2px]">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="w-full max-w-sm bg-white border border-[#E9ECEF] rounded-[48px] p-10 text-center space-y-8 relative overflow-hidden shadow-[0_0_100px_rgba(0,191,166,0.15)]"
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-[24px] p-8 shadow-2xl relative border border-zinc-100 dark:border-zinc-800"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full" />
-              <div className="w-20 h-20 bg-amber-500/10 rounded-[32px] flex items-center justify-center mx-auto border border-amber-500/20">
-                <AlertTriangle className="w-10 h-10 text-amber-500" />
+              <div className="space-y-6">
+                <div className="space-y-2">
+                   <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">Responsible Gaming</h3>
+                   <p className="text-zinc-600 dark:text-zinc-400 text-sm font-medium leading-relaxed">
+                     Bet responsibly. Gambling can be addictive and may lead to financial loss. Only stake what you can afford to lose. 18+.
+                   </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button 
+                    onClick={() => {
+                      window.open('https://wa.me/256709728322', '_blank');
+                      closeWarning();
+                    }}
+                    className="px-6 h-12 bg-[#4F46E5] text-white rounded-full font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-indigo-500/20"
+                  >
+                    Join WhatsApp Community
+                  </button>
+                </div>
               </div>
-              <div className="space-y-3">
-                <h3 className="text-3xl font-black lowercase italic tracking-tight leading-none text-zinc-900">Market Protocol</h3>
-                <p className="text-zinc-400 text-xs font-bold leading-relaxed lowercase tracking-tight">
-                  Lucky Tip$ is for intelligence and entertainment purposes. Sports involve risk. Play responsibly. 18+.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <button 
-                  onClick={closeWarning}
-                  className="w-full h-16 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
-                >
-                  Initiate Sync
-                </button>
-                <button 
-                  onClick={() => window.open('https://chat.whatsapp.com/H0Wt5wj3odY60J9CWS7TJH?mode=gi_t', '_blank')}
-                  className="w-full text-[10px] font-black text-primary uppercase tracking-widest lowercase hover:underline underline-offset-4"
-                >
-                  Join Telegram Commms
-                </button>
-              </div>
+              
+              {/* Tooltip triangle at the bottom center */}
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white dark:bg-zinc-900 rotate-45 border-r border-b border-zinc-100 dark:border-zinc-800" />
             </motion.div>
           </div>
         )}

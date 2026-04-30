@@ -114,7 +114,7 @@ export default function Profile() {
             </div>
           ) : (
             <>
-               <h3 className="text-3xl font-black tracking-tight text-zinc-900 leading-none lowercase">{profile.displayName}</h3>
+               <h3 className="text-3xl font-black tracking-tight text-[var(--foreground)] leading-none lowercase">{profile.displayName}</h3>
                <p className="text-zinc-400 text-xs font-bold">{profile.email}</p>
                <div className={cn(
                  "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border transition-all mt-3",

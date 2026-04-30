@@ -52,7 +52,7 @@ export default function PreviousPredictions() {
           <ArrowLeft className="w-5 h-5 text-zinc-600" />
         </Link>
         <div className="text-center">
-          <h2 className="text-2xl font-black tracking-tight text-zinc-900 leading-none lowercase">History</h2>
+          <h2 className="text-2xl font-black tracking-tight text-[var(--foreground)] leading-none lowercase">History</h2>
           <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] lowercase">Previous days performance</p>
         </div>
         <div className="w-11" />
@@ -115,18 +115,18 @@ export default function PreviousPredictions() {
 
               <div className="flex items-center justify-between mb-6 px-2">
                 <div className="flex-1 text-center">
-                  <span className="font-black text-[15px] text-zinc-900 leading-tight lowercase block">{match.homeTeam}</span>
+                  <span className="font-black text-[15px] text-[var(--foreground)] leading-tight lowercase block">{match.homeTeam}</span>
                 </div>
                 <div className="px-6 text-zinc-200 font-bold text-[10px] uppercase tracking-widest">VS</div>
                 <div className="flex-1 text-center">
-                  <span className="font-black text-[15px] text-zinc-900 leading-tight lowercase block">{match.awayTeam}</span>
+                  <span className="font-black text-[15px] text-[var(--foreground)] leading-tight lowercase block">{match.awayTeam}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-5 border-t border-zinc-50">
                 <div className="space-y-0.5">
                   <p className="text-[9px] uppercase font-black text-zinc-400 tracking-[0.2em] lowercase">prediction</p>
-                  <div className="font-black text-zinc-900 lowercase text-sm">{match.tip}</div>
+                  <div className="font-black text-[var(--foreground)] lowercase text-sm">{match.tip}</div>
                 </div>
                 <div className="text-right space-y-0.5">
                   <p className="text-[9px] uppercase font-black text-zinc-400 tracking-[0.2em] lowercase">odds</p>

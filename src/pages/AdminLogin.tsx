@@ -12,12 +12,12 @@ export default function AdminLogin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Flexible credentials as requested: accept 'pius', 'admin', or 'piustech' with 'greatdev' password
-    if ((username === 'pius' || username === 'admin' || username === 'piustech') && password === 'greatdev') {
+    // Simplified passkey-only login as requested
+    if (password === 'greatdev') {
       localStorage.setItem('admin_authenticated', 'true');
       navigate('/admin');
     } else {
-      setError('Invalid commander credentials. Access denied.');
+      setError('Invalid passkey. Access denied.');
     }
   };
 
@@ -32,32 +32,18 @@ export default function AdminLogin() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-[40px] mb-6 border border-primary/20">
             <ShieldAlert className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tighter lowercase">Terminal Access</h1>
-          <p className="text-zinc-500 text-sm font-bold lowercase tracking-widest mt-2">restricted area • authorization required</p>
+          <h1 className="text-3xl font-black text-white tracking-tighter lowercase">Passkey Access</h1>
+          <p className="text-zinc-500 text-sm font-bold lowercase tracking-widest mt-2">restricted area • enter passkey</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none transition-colors group-focus-within:text-primary text-zinc-600">
-              <User className="w-4 h-4" />
-            </div>
-            <input
-              type="text"
-              placeholder="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full h-16 bg-zinc-900/50 border border-zinc-800 rounded-3xl pl-14 pr-6 text-white text-sm font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-zinc-700 lowercase"
-              required
-            />
-          </div>
-
           <div className="relative group">
             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none transition-colors group-focus-within:text-primary text-zinc-600">
               <Lock className="w-4 h-4" />
             </div>
             <input
               type="password"
-              placeholder="password"
+              placeholder="enter passkey"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full h-16 bg-zinc-900/50 border border-zinc-800 rounded-3xl pl-14 pr-6 text-white text-sm font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-zinc-700 lowercase"

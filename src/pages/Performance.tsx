@@ -70,7 +70,7 @@ export default function Performance() {
     return (
       <div className="grid grid-cols-7 mb-4">
         {days.map((day, i) => (
-          <div key={i} className="text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">
+          <div key={i} className="text-center text-[10px] font-black uppercase tracking-widest text-[var(--muted-foreground)]">
             {day}
           </div>
         ))}
@@ -101,17 +101,17 @@ export default function Performance() {
                 !isCurrentMonth && "opacity-20 pointer-events-none"
               )}
             >
-              <div 
-                className={cn(
-                  "w-10 h-10 flex items-center justify-center rounded-2xl text-sm font-black transition-all cursor-pointer",
-                  isSelected ? "bg-primary text-white shadow-lg shadow-primary/20 scale-110" : "text-zinc-900 shadow-none",
-                  perf === 'won' && !isSelected && "bg-green-500/10 text-green-600 border border-green-500/20",
-                  perf === 'lost' && !isSelected && "bg-red-500/10 text-red-600 border border-red-500/20",
-                  perf === 'fair' && !isSelected && "bg-zinc-100 text-zinc-500 border border-zinc-200",
-                  perf === 'today' && !isSelected && "bg-orange-500/10 text-orange-600 border border-orange-500/20"
-                )}
-                onClick={() => isCurrentMonth && setCurrentMonth(date)}
-              >
+                <div 
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center rounded-2xl text-sm font-black transition-all cursor-pointer",
+                    isSelected ? "bg-primary text-white shadow-lg shadow-primary/20 scale-110" : "text-zinc-900 dark:text-white",
+                    perf === 'won' && !isSelected && "bg-green-500/10 text-green-600 border border-green-500/20",
+                    perf === 'lost' && !isSelected && "bg-red-500/10 text-red-600 border border-red-500/20",
+                    perf === 'fair' && !isSelected && "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700",
+                    perf === 'today' && !isSelected && "bg-orange-500/10 text-orange-600 border border-orange-500/20"
+                  )}
+                  onClick={() => isCurrentMonth && setCurrentMonth(date)}
+                >
                 {format(date, 'd').padStart(2, '0')}
               </div>
             </div>
