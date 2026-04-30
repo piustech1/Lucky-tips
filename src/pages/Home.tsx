@@ -334,6 +334,12 @@ export default function Home() {
 
                 <div className="flex justify-end gap-3 pt-2">
                   <button 
+                    onClick={closeWarning}
+                    className="px-4 h-12 text-zinc-500 dark:text-zinc-400 font-bold text-sm hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
+                  >
+                    Later
+                  </button>
+                  <button 
                     onClick={() => {
                       window.open('https://wa.me/256709728322', '_blank');
                       closeWarning();
