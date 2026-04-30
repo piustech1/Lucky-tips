@@ -4,10 +4,11 @@ import {
   ChevronRight, CheckCircle2, AlertCircle, Globe, Key, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ref, set, get, update } from 'firebase/database';
+import { ref, update } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
 import { fetchFromFootballAPI, getActiveKeyIndex, setActiveKeyIndex } from '../../services/apiService';
+import { normalize, saveToFirebase } from '../../services/dbService';
 
 interface League {
   league: {
@@ -32,11 +33,6 @@ interface Team {
   };
 }
 
-/**
- * Normalizes strings for consistent keys
- */
-const normalize = (name: string) => name.toLowerCase().trim();
-
 export default function AdminLogoManager() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -53,22 +49,29 @@ export default function AdminLogoManager() {
   }, []);
 
   const deleteAllLogos = async () => {
-    if (!window.confirm('Are you absolutely sure you want to delete ALL cached logos? This action cannot be reversed.')) return;
+    if (!window.confirm('Are you absolutely sure you want to delete ALL cached logos? This will reset the database structure.')) return;
     
     setIsDeleting(true);
     setError(null);
     try {
-      await set(ref(rtdb, 'logos'), null);
-      setSuccess('Logo cache cleared from terminal');
+      console.log('[LogoManager] Performing safe delete...');
+      // Safe Delete: Rebuild structure instead of removing node
+      await saveToFirebase('logos', {
+        teams: {},
+        leagues: {}
+      });
+      setSuccess('Logo cache cleared and rebuilt safely');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError('Failed to purge cache');
+      console.error('[LogoManager] Delete failed:', err);
+      setError('Failed to purge cache safely. Check Firebase rules.');
     } finally {
       setIsDeleting(false);
     }
   };
 
   const fetchLeagues = async () => {
+    console.log('[LogoManager] Fetching leagues...');
     setIsLoadingLeagues(true);
     setError(null);
     try {
@@ -79,6 +82,7 @@ export default function AdminLogoManager() {
         setError('Failed to load leagues from API');
       }
     } catch (err) {
+      console.error('[LogoManager] League API error:', err);
       setError('Network error loading leagues');
     } finally {
       setIsLoadingLeagues(false);
@@ -86,6 +90,7 @@ export default function AdminLogoManager() {
   };
 
   const fetchTeams = async (leagueId: number) => {
+    console.log(`[LogoManager] Fetching teams for league ${leagueId}...`);
     setSelectedLeague(leagueId);
     setIsLoadingTeams(true);
     setTeams([]);
@@ -98,6 +103,7 @@ export default function AdminLogoManager() {
         setError('Failed to load teams for this league');
       }
     } catch (err) {
+      console.error('[LogoManager] Team API error:', err);
       setError('Network error loading teams');
     } finally {
       setIsLoadingTeams(false);
@@ -105,6 +111,7 @@ export default function AdminLogoManager() {
   };
 
   const saveAllLogos = async () => {
+    console.log('[LogoManager] Bulk saving logos...');
     setIsSaving(true);
     setError(null);
     try {
@@ -136,13 +143,16 @@ export default function AdminLogoManager() {
       // Perform bulk update on logos node
       if (Object.keys(updates).length > 0) {
         await update(ref(rtdb, 'logos'), updates);
+        console.log('[LogoManager] Bulk save successful');
+      } else {
+        console.warn('[LogoManager] No data to save');
       }
 
       setSuccess('All logos synchronized successfully with terminal');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error('Save Error:', err);
-      setError('Failed to sync logos with firebase');
+      console.error('[LogoManager] Save Error:', err);
+      setError('Failed to sync logos with firebase. Check console for details.');
     } finally {
       setIsSaving(false);
     }

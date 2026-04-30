@@ -22,8 +22,7 @@ import {
 } from 'firebase/database';
 import { rtdb } from '../../lib/firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
-
-const normalize = (name: string) => name.toLowerCase().trim();
+import { normalize, ensureLogosStructure } from '../../services/dbService';
 
 const CATEGORIES = [
   { id: 'free', label: 'Free Tips', icon: Sparkles },
@@ -59,6 +58,7 @@ export default function AdminTips() {
   const [isAdding, setIsAdding] = useState(false);
   const [filter, setFilter] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     homeTeam: '',
@@ -80,38 +80,61 @@ export default function AdminTips() {
   const [finalScore, setFinalScore] = useState('');
   const [cachedTeams, setCachedTeams] = useState<any[]>([]);
   const [cachedLeagues, setCachedLeagues] = useState<any[]>([]);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const logosRef = ref(rtdb, 'logos');
-    get(logosRef).then((snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        if (data.teams) {
-          setCachedTeams(Object.values(data.teams));
-        }
-        if (data.leagues) {
-          setCachedLeagues(Object.values(data.leagues));
-        }
+    const initializeAdmin = async () => {
+      try {
+        console.log('[AdminTips] Starting system boot...');
+        setIsInitializing(true);
+        setError(null);
+
+        // Auto-recovery: Recreate logos if missing
+        await ensureLogosStructure();
+
+        const logosRef = ref(rtdb, 'logos');
+        const snapshot = await get(logosRef);
+        const data = snapshot.val() || { teams: {}, leagues: {} };
+        
+        console.log('[AdminTips] Matrix data received:', data);
+        
+        // Safe mapping with Object.values and handling missing properties
+        const teams = data.teams ? Object.values(data.teams) : [];
+        const leagues = data.leagues ? Object.values(data.leagues) : [];
+        
+        setCachedTeams(teams);
+        setCachedLeagues(leagues);
+      } catch (err) {
+        console.error('[AdminTips] Boot sequence failed:', err);
+        setError('Database connection error. Check your credentials or quota.');
+      } finally {
+        setIsInitializing(false);
       }
-    });
+    };
+
+    initializeAdmin();
 
     const predictionsRef = ref(rtdb, 'predictions');
     const q = query(predictionsRef, orderByChild('createdAt'));
     
     const unsubscribe = onValue(q, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const tipsList = Object.entries(data).map(([id, val]: [string, any]) => ({
-          id,
-          ...val
-        })).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        setTips(tipsList);
-      } else {
-        setTips([]);
+      try {
+        const data = snapshot.val();
+        if (data) {
+          const tipsList = Object.entries(data).map(([id, val]: [string, any]) => ({
+            id,
+            ...val
+          })).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+          setTips(tipsList);
+        } else {
+          setTips([]);
+        }
+      } catch (err) {
+        console.error('[AdminTips] Prediction sync error:', err);
       }
       setLoading(false);
-    }, (error) => {
-      console.error('RTDB List Error:', error);
+    }, (err) => {
+      console.error('[AdminTips] Subscription error:', err);
       setLoading(false);
     });
 
@@ -124,11 +147,12 @@ export default function AdminTips() {
     
     setIsSubmitting(true);
     try {
+      console.log('[AdminTips] Submitting new tip frequency...');
       const dataToSave = {
         ...formData,
-        homeLogo: formData.homeLogo || 'https://via.placeholder.com/150',
-        awayLogo: formData.awayLogo || 'https://via.placeholder.com/150',
-        leagueLogo: formData.leagueLogo || 'https://via.placeholder.com/50',
+        homeLogo: formData.homeLogo || 'https://via.placeholder.com/150?text=Home',
+        awayLogo: formData.awayLogo || 'https://via.placeholder.com/150?text=Away',
+        leagueLogo: formData.leagueLogo || 'https://via.placeholder.com/50?text=League',
         createdAt: serverTimestamp(),
         isVip: formData.category === 'vip' || formData.isVip
       };
@@ -136,6 +160,7 @@ export default function AdminTips() {
       const predictionsRef = ref(rtdb, 'predictions');
       await push(predictionsRef, dataToSave);
       
+      console.log('[AdminTips] Save successful');
       setIsAdding(false);
       setFormData({
         homeTeam: '',
@@ -153,11 +178,42 @@ export default function AdminTips() {
         status: 'pending'
       });
     } catch (error) {
-       console.error('Add Tip Error:', error);
+       console.error('[AdminTips] Submission failed:', error);
+       handleFirestoreError(error, OperationType.WRITE, 'predictions');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isInitializing) {
+    return (
+      <div className="h-[70vh] flex flex-col items-center justify-center gap-6">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <div className="text-center">
+          <p className="text-sm font-black lowercase tracking-tight">Accessing terminal matrix...</p>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Fetching stored logo data</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-[70vh] flex flex-col items-center justify-center gap-6 p-10 bg-red-50 rounded-[40px] border border-red-100 italic">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <div className="text-center">
+          <p className="font-black lowercase text-xl">System Failure</p>
+          <p className="text-sm text-red-600 mt-2 font-medium">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-8 h-12 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all"
+          >
+            Reboot Matrix
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const updateStatus = async (id: string, status: string, scoreText?: string) => {
     try {
