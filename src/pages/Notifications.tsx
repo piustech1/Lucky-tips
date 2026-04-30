@@ -12,6 +12,10 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Clear badge count
+    const badgeRef = ref(rtdb, 'notifications_badge');
+    update(ref(rtdb), { notifications_badge: 0 });
+
     const notificationsRef = ref(rtdb, 'notifications');
     const q = query(notificationsRef, orderByChild('createdAt'), limitToLast(30));
     const unsubscribe = onValue(q, (snapshot) => {

@@ -163,6 +163,22 @@ export default function AdminTips() {
       const predictionsRef = ref(rtdb, 'predictions');
       await push(predictionsRef, dataToSave);
       
+      // Automatic global alert
+      const now = format(new Date(), 'dd/MM/yyyy');
+      const alertsRef = ref(rtdb, 'notifications');
+      await push(alertsRef, {
+        title: 'New Tips Live!',
+        message: `Expert predictions for ${now} have been uploaded. Check them out!`,
+        type: 'alert',
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+
+      // Increment badge counter
+      const badgeRef = ref(rtdb, 'notifications_badge');
+      const currentBadge = (await get(badgeRef)).val() || 0;
+      await update(ref(rtdb), { notifications_badge: currentBadge + 1 });
+      
       console.log('[AdminTips] Save successful');
       setIsAdding(false);
       setFormData({
@@ -390,28 +406,28 @@ export default function AdminTips() {
               onClick={() => setIsAdding(false)}
             />
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 40 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 40 }}
-              className="relative w-full max-w-4xl bg-white rounded-[56px] shadow-2xl border border-[#E9ECEF] flex flex-col max-h-[90vh] overflow-hidden"
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-4xl bg-white rounded-xl shadow-2xl border border-zinc-200 flex flex-col max-h-[95vh] overflow-hidden"
             >
-              <div className="p-10 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/30">
-                 <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-primary/10 rounded-[28px] flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
-                       <Sparkles className="w-8 h-8 text-primary" />
+              <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-zinc-900 rounded-lg flex items-center justify-center shadow-lg">
+                       <Plus className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                       <h4 className="text-3xl font-black italic lowercase tracking-tight">Forge Tip</h4>
-                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] lowercase">Input matrix parameters</p>
+                       <h4 className="text-xl font-black italic lowercase tracking-tight">Forge Tip Matrix</h4>
+                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">Inject parameters into live production</p>
                     </div>
                  </div>
-                 <button onClick={() => setIsAdding(false)} className="w-12 h-12 bg-white border border-zinc-200 rounded-[20px] flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-all active:scale-90 shadow-sm">
-                    <XCircle className="w-6 h-6" />
+                 <button onClick={() => setIsAdding(false)} className="w-10 h-10 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-400 hover:text-red-500 transition-all active:scale-90">
+                    <XCircle className="w-5 h-5" />
                  </button>
               </div>
 
-              <form className="p-10 overflow-y-auto space-y-10 custom-scrollbar" onSubmit={(e) => { e.preventDefault(); handleAddTip(e); }}>
-                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <form className="p-8 overflow-y-auto space-y-8 custom-scrollbar" onSubmit={(e) => { e.preventDefault(); handleAddTip(e); }}>
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                                 <SearchableDropdown 
@@ -444,70 +460,70 @@ export default function AdminTips() {
                     <div className="space-y-6">
                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Market Vector</label>
+                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Market Segment</label>
                              <select 
                                value={formData.category}
                                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                               className="w-full h-12 bg-zinc-50 border border-zinc-200 rounded-lg px-4 text-sm font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
                              >
                                {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                              </select>
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Probability (Odds)</label>
+                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Market Odds</label>
                              <div className="relative">
-                               <TrendingUp className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                               <TrendingUp className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                                <input 
                                  placeholder="1.95"
                                  value={formData.odds}
                                  onChange={(e) => setFormData({...formData, odds: e.target.value})}
-                                 className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-12 text-sm font-black outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
+                                 className="w-full h-12 bg-zinc-50 border border-zinc-200 rounded-lg px-10 text-sm font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
                                />
                              </div>
                           </div>
                        </div>
 
                        <div className="space-y-2">
-                          <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Selected Outcome</label>
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Selected Outcome</label>
                           <div className="relative">
-                             <CheckCircle2 className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                             <CheckCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                              <input 
-                               placeholder="Both Teams To Score"
+                               placeholder="e.g. Both Teams To Score"
                                value={formData.tip}
                                onChange={(e) => setFormData({...formData, tip: e.target.value})}
-                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-12 text-sm font-black lowercase outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-zinc-300"
+                               className="w-full h-12 bg-zinc-50 border border-zinc-200 rounded-lg px-10 text-sm font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
                              />
                           </div>
                        </div>
 
                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Temporal Date</label>
+                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Kick-off Date</label>
                              <input 
                                type="date"
                                value={formData.date}
                                onChange={(e) => setFormData({...formData, date: e.target.value})}
-                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-sm font-black outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                               className="w-full h-12 bg-zinc-50 border border-zinc-200 rounded-lg px-4 text-xs font-black outline-none focus:ring-2 focus:ring-primary/10 transition-all font-sans"
                              />
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-2">Temporal Time</label>
+                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Match Time</label>
                              <input 
                                type="time"
                                value={formData.time}
                                onChange={(e) => setFormData({...formData, time: e.target.value})}
-                               className="w-full h-16 bg-zinc-50 border border-zinc-100 rounded-[28px] px-6 text-sm font-black outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                               className="w-full h-12 bg-zinc-50 border border-zinc-200 rounded-lg px-4 text-xs font-black outline-none focus:ring-2 focus:ring-primary/10 transition-all font-sans"
                              />
                           </div>
                        </div>
                     </div>
                  </div>
 
-                 <div className="flex flex-col md:flex-row items-center justify-between gap-10 pt-10 border-t border-zinc-100">
+                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-zinc-100">
                     <div className="flex items-center gap-6">
                        <label className="flex items-center gap-3 cursor-pointer group">
                           <div className={cn(
-                            "w-12 h-6 rounded-full relative transition-all duration-300",
+                            "w-10 h-5 rounded-full relative transition-all duration-300",
                             formData.isVip ? "bg-primary" : "bg-zinc-200"
                           )}>
                              <input 
@@ -517,8 +533,8 @@ export default function AdminTips() {
                                onChange={(e) => setFormData({...formData, isVip: e.target.checked})} 
                              />
                              <div className={cn(
-                               "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
-                               formData.isVip ? "left-7" : "left-1"
+                               "absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-sm",
+                               formData.isVip ? "left-5.5" : "left-0.5"
                              )} />
                           </div>
                           <span className="text-xs font-black lowercase tracking-tight text-zinc-600">VIP Access Priority</span>
@@ -528,9 +544,9 @@ export default function AdminTips() {
                     <button 
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full md:w-auto h-20 px-16 bg-premium-gradient text-white rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 hover:scale-[1.03] active:scale-97 transition-all flex items-center justify-center gap-4 disabled:opacity-50"
+                      className="w-full md:w-auto h-16 px-16 bg-zinc-900 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-97 transition-all flex items-center justify-center gap-4 disabled:opacity-50"
                     >
-                       {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6" />}
+                       {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
                        Finalize Injection
                     </button>
                  </div>

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../components/ThemeProvider';
+import { ref, onValue } from 'firebase/database';
+import { rtdb } from '../lib/firebase';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -15,9 +17,18 @@ function ScrollToTop() {
 
 export default function MainLayout({ onLogout }: { onLogout: () => void }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [badgeCount, setBadgeCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    const badgeRef = ref(rtdb, 'notifications_badge');
+    const unsubscribe = onValue(badgeRef, (snapshot) => {
+      setBadgeCount(snapshot.val() || 0);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const toggleDrawer = () => setIsDrawerOpen(!isDrawerOpen);
 
@@ -25,7 +36,7 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
     { icon: Home, label: 'Home', path: '/' },
     { icon: Shield, label: 'VIP', path: '/vip' },
     { icon: LayoutGrid, label: 'Sections', path: '/sections' },
-    { icon: Newspaper, label: 'Alerts', path: '/notifications' },
+    { icon: Newspaper, label: 'Alerts', path: '/notifications', showBadge: true },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
@@ -121,10 +132,19 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
               )}
             >
               <div className={cn(
-                "p-1.5 rounded-xl transition-all duration-300",
+                "p-1.5 rounded-xl transition-all duration-300 relative",
                 isActive && "bg-primary/20 shadow-[0_0_20px_rgba(0,191,166,0.1)]"
               )}>
                 <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5px] text-primary")} />
+                {item.showBadge && badgeCount > 0 && (
+                  <motion.div 
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-[var(--background)] px-1"
+                  >
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </motion.div>
+                )}
               </div>
               <span className="text-[9px] font-bold uppercase tracking-widest leading-none">{item.label}</span>
               {isActive && (

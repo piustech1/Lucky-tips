@@ -20,7 +20,9 @@ export default function PredictionCard({ prediction, index = 0 }: PredictionCard
   const [homeLogo, setHomeLogo] = useState<string | null>(prediction.homeLogo || null);
   const [awayLogo, setAwayLogo] = useState<string | null>(prediction.awayLogo || null);
   
-  const isLocked = !isVip && (prediction.isVip || (prediction.category && prediction.category !== 'free'));
+  const isLocked = !isVip && 
+                  (prediction.isVip || (prediction.category && prediction.category !== 'free')) && 
+                  prediction.status === 'pending';
 
   const getStatusIcon = () => {
     switch(prediction.status) {
