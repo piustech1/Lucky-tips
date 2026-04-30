@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Onboarding from './pages/Onboarding';
 import Notifications from './pages/Notifications';
+import LoggedOut from './pages/LoggedOut';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Performance from './pages/Performance';
@@ -42,6 +43,7 @@ import AdminHistory from './pages/admin/AdminHistory';
 import AdminMarketIntel from './pages/admin/AdminMarketIntel';
 import AdminFeedback from './pages/admin/AdminFeedback';
 import AdminLogoManager from './pages/admin/AdminLogoManager';
+import AdminConflicts from './pages/admin/AdminConflicts';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -85,6 +87,10 @@ function AppContent() {
           element={!isAuthenticated ? <Login /> : <Navigate to="/" />} 
         />
         <Route 
+          path="/logged-out" 
+          element={<LoggedOut />} 
+        />
+        <Route 
           path="/admin/login" 
           element={<AdminLogin />} 
         />
@@ -124,6 +130,7 @@ function AppContent() {
           <Route path="market-intel" element={<AdminMarketIntel />} />
           <Route path="feedback" element={<AdminFeedback />} />
           <Route path="logo-manager" element={<AdminLogoManager />} />
+          <Route path="conflicts" element={<AdminConflicts />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />

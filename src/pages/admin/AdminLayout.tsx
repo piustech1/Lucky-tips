@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Trophy, Wallet, 
   Bell, BarChart3, Settings, LogOut, 
   Menu, X, History, FileText, Activity, Globe,
-  MessageSquare
+  MessageSquare, ShieldAlert
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Trophy, label: 'Tips System', path: '/admin/tips' },
+  { icon: ShieldAlert, label: 'Device Alerts', path: '/admin/conflicts' },
   { icon: Globe, label: 'Logo Manager', path: '/admin/logo-manager' },
   { icon: History, label: 'Tips History', path: '/admin/history' },
   { icon: Users, label: 'User Hub', path: '/admin/users' },

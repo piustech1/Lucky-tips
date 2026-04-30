@@ -37,7 +37,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       
-      if (firebaseUser) {
+        if (firebaseUser) {
+        // Store display name for logged out page if needed
+        if (firebaseUser.displayName) {
+          localStorage.setItem('last_logged_in_user', firebaseUser.displayName);
+        }
+
         // Handle Session Management (Single Device Login)
         const currentSessionId = localStorage.getItem('lucky_tips_session_id');
         if (!currentSessionId) {
@@ -56,9 +61,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
             // If session IDs don't match, log out (Second device logged in)
             if (profileData.sessionId && storedSessionId && profileData.sessionId !== storedSessionId) {
+              // Log the conflict for admin review
+              const conflictRef = ref(rtdb, `device_conflicts/${firebaseUser.uid}`);
+              set(conflictRef, {
+                userId: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName || 'Anonymous',
+                timestamp: Date.now(),
+                attemptedSessionId: profileData.sessionId,
+                currentSessionId: storedSessionId,
+                status: 'flagged'
+              });
+
               auth.signOut();
               localStorage.removeItem('lucky_tips_session_id');
-              alert('You have been logged out because your account is active on another device.');
+              window.location.href = '/logged-out';
               return;
             }
 
