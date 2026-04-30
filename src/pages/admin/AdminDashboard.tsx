@@ -19,13 +19,15 @@ export default function AdminDashboard() {
     totalUsers: 0,
     activeSubs: 0,
     totalTips: 0,
-    winRate: 0
+    winRate: 0,
+    revenueData: [] as any[]
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const usersRef = ref(rtdb, 'users');
     const predictionsRef = ref(rtdb, 'predictions');
+    const paymentsRef = ref(rtdb, 'payments');
 
     const unsubscribeUsers = onValue(usersRef, (snapshot) => {
       const usersData = snapshot.val() || {};
@@ -52,12 +54,38 @@ export default function AdminDashboard() {
         totalTips,
         winRate: Math.round(winRate * 10) / 10
       }));
+    });
+
+    const unsubscribePayments = onValue(paymentsRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const payments = Object.values(data) as any[];
+      
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const daily = [0, 0, 0, 0, 0, 0, 0];
+      
+      payments.forEach(p => {
+        if (p.timestamp) {
+          const date = new Date(p.timestamp);
+          daily[date.getDay()] += (p.amount || 0);
+        }
+      });
+
+      const revenueData = days.map((day, i) => ({
+        name: day,
+        value: daily[i]
+      }));
+
+      setStats(prev => ({
+        ...prev,
+        revenueData
+      }));
       setLoading(false);
     });
 
     return () => {
       unsubscribeUsers();
       unsubscribePredictions();
+      unsubscribePayments();
     };
   }, []);
 
@@ -66,16 +94,6 @@ export default function AdminDashboard() {
     { label: 'VIP Members', value: stats.activeSubs.toLocaleString(), icon: Wallet, color: 'bg-green-500', trend: '+8%' },
     { label: 'Total Tips', value: stats.totalTips.toLocaleString(), icon: Trophy, color: 'bg-amber-500', trend: '+5%' },
     { label: 'Accuracy', value: `${stats.winRate}%`, icon: CheckCircle2, color: 'bg-purple-500', trend: 'Stable' },
-  ];
-
-  const revenueData = [
-    { name: 'Mon', value: 4000 },
-    { name: 'Tue', value: 3000 },
-    { name: 'Wed', value: 5000 },
-    { name: 'Thu', value: 2780 },
-    { name: 'Fri', value: 6890 },
-    { name: 'Sat', value: 8390 },
-    { name: 'Sun', value: 9490 },
   ];
 
   const userGrowthData = [
@@ -155,7 +173,7 @@ export default function AdminDashboard() {
           </div>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData}>
+              <AreaChart data={stats.revenueData}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#00BFA6" stopOpacity={0.1}/>

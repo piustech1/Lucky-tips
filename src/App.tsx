@@ -40,6 +40,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminHistory from './pages/admin/AdminHistory';
 import AdminMarketIntel from './pages/admin/AdminMarketIntel';
+import AdminFeedback from './pages/admin/AdminFeedback';
 import AdminLogoManager from './pages/admin/AdminLogoManager';
 
 function AppContent() {
@@ -110,6 +111,7 @@ function AppContent() {
           <Route path="logs" element={<AdminLogs />} />
           <Route path="history" element={<AdminHistory />} />
           <Route path="market-intel" element={<AdminMarketIntel />} />
+          <Route path="feedback" element={<AdminFeedback />} />
           <Route path="logo-manager" element={<AdminLogoManager />} />
         </Route>
 

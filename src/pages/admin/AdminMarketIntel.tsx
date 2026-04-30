@@ -32,7 +32,9 @@ export default function AdminMarketIntel() {
 
   useEffect(() => {
     const predictionsRef = ref(rtdb, 'predictions');
-    const unsubscribe = onValue(predictionsRef, (snapshot) => {
+    const usersRef = ref(rtdb, 'users');
+
+    const unsubscribePredictions = onValue(predictionsRef, (snapshot) => {
       const data = snapshot.val() || {};
       const tips = Object.values(data) as any[];
       
@@ -58,10 +60,40 @@ export default function AdminMarketIntel() {
         vipTips,
         categories: categoryData
       }));
+    });
+
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const users = Object.values(data) as any[];
+      const total = users.length;
+      
+      if (total === 0) return;
+
+      const countries = users.reduce((acc: any, u) => {
+        const c = u.country || 'Uganda';
+        acc[c] = (acc[c] || 0) + 1;
+        return acc;
+      }, {});
+
+      const locationData = Object.entries(countries).map(([name, count]: [string, any]) => ({
+        name,
+        value: Math.round((count / total) * 100),
+        color: name === 'Uganda' ? '#00BFA6' : 
+               name === 'Kenya' ? '#1DE9B6' : 
+               name === 'Tanzania' ? '#00897B' : '#E0F7F5'
+      }));
+
+      setStats(prev => ({
+        ...prev,
+        userLocations: locationData
+      }));
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribePredictions();
+      unsubscribeUsers();
+    };
   }, []);
 
   return (

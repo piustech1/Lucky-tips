@@ -84,7 +84,7 @@ export default function AdminSettings() {
            </div>
 
            <div className="space-y-6">
-              <AdminSettingInput label="App Name Override" value="Lucky Tips" />
+              <AdminSettingInput label="App Name Override" value="Lucky Tip$" />
               <AdminSettingInput label="Contact Whatsapp" value="+256 701 234 567" />
               <div className="grid grid-cols-2 gap-4">
                  <AdminSettingInput label="VIP Monthly Price" value="29.00" />

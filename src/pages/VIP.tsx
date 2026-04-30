@@ -32,10 +32,15 @@ export default function VIP() {
         const rawData = snapshot.val();
         let tips: Prediction[] = [];
         if (rawData) {
+          const now = Date.now();
+          const oneDayMs = 24 * 60 * 60 * 1000;
+          
           tips = Object.entries(rawData).map(([id, val]: [string, any]) => ({
             id,
             ...val
-          } as Prediction)).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+          } as Prediction))
+          .filter(t => (now - (t.createdAt || 0)) < oneDayMs)
+          .sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
         }
 
         const categorized: { [key: string]: Prediction[] } = {};

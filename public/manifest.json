@@ -1,0 +1,49 @@
+{
+  "name": "Lucky Tip$",
+  "short_name": "LuckyTip$",
+  "description": "Premium expert sports analysis and daily football predictions with accuracy and detail.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0F9F8",
+  "theme_color": "#00BFA6",
+  "categories": ["sports", "finance", "entertainment"],
+  "icons": [
+    {
+      "src": "https://i.postimg.cc/hvcm4Q2Y/launchericon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.postimg.cc/hvcm4Q2Y/launchericon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.postimg.cc/prRjV5s4/launchericon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.postimg.cc/prRjV5s4/launchericon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daily Tips",
+      "url": "/",
+      "icons": [{ "src": "https://i.postimg.cc/hvcm4Q2Y/launchericon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "VIP Access",
+      "url": "/vip",
+      "icons": [{ "src": "https://i.postimg.cc/hvcm4Q2Y/launchericon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

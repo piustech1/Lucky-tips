@@ -6,16 +6,48 @@ import { rtdb } from '../lib/firebase';
 import { ref, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 import PredictionCard from '../components/PredictionCard';
 import { CATEGORIES } from '../constants';
-import { AlertTriangle, MessageSquare, Loader2, Trophy, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { AlertTriangle, MessageSquare, Loader2, Trophy, XCircle, Clock, Star, Send } from 'lucide-react';
+import { format, differenceInDays, parseISO } from 'date-fns';
 import { cn } from '../lib/utils';
+import { useUser } from '../contexts/UserContext';
+
+const HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=800", // Premier League
+  "https://images.unsplash.com/photo-1431324155629-1a6eda1eed2d?auto=format&fit=crop&q=80&w=800", // La Liga
+  "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=800", // Serie A
+  "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=800", // Bundesliga
+  "https://images.unsplash.com/photo-1518091043644-c1d445bcc97a?auto=format&fit=crop&q=80&w=800", // Ligue 1
+  "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=800", // Champions League
+  "https://images.unsplash.com/photo-1563299796-17596ed6b017?auto=format&fit=crop&q=80&w=800", // World Cup
+];
 
 export default function Home() {
   const navigate = useNavigate();
+  const { profile } = useUser();
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWarning, setShowWarning] = useState(false);
   const [activeTab, setActiveTab] = useState<'today' | 'previous'>('today');
+  const [currentHero, setCurrentHero] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentHero((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getExpiryReminder = () => {
+    if (profile?.subscriptionTier === 'vip' && profile?.subscriptionExpiry) {
+      const daysLeft = differenceInDays(parseISO(profile.subscriptionExpiry), new Date());
+      if (daysLeft >= 0 && daysLeft <= 2) {
+        return daysLeft === 0 ? "Expires today!" : `${daysLeft} days remaining`;
+      }
+    }
+    return null;
+  };
+
+  const expiryMessage = getExpiryReminder();
 
   useEffect(() => {
     // Check if user has seen the warning in this session
@@ -71,12 +103,12 @@ export default function Home() {
   return (
     <div className="space-y-8 pb-10">
       {/* Hot Categories Horizontal Scroll */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="font-black text-[12px] text-zinc-400 uppercase tracking-[0.2em] lowercase">Hot markets</h3>
+      <section className="space-y-4 px-1">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-[12px] text-zinc-400 uppercase tracking-[0.2em] lowercase italic">Hot markets</h3>
           <button 
             onClick={() => navigate('/sections')}
-            className="text-[10px] font-black text-primary uppercase tracking-widest lowercase"
+            className="text-[10px] font-black text-primary uppercase tracking-widest lowercase underline underline-offset-4"
           >
             view all
           </button>
@@ -88,12 +120,12 @@ export default function Home() {
               key={cat.id}
               whileTap={{ scale: 0.96 }}
               onClick={() => navigate(`/sections?type=${cat.id}`)}
-              className="flex-none w-48 h-12 snap-start flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] px-4 rounded-xl shadow-sm hover:shadow-md transition-all group"
+              className="flex-none w-48 h-12 snap-start flex items-center gap-3 bg-white border border-[#E9ECEF] px-4 rounded-2xl shadow-sm hover:shadow-md transition-all group"
             >
               <div className="shrink-0 p-1.5 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary group-hover:text-white">
                 <cat.icon className="w-4 h-4 text-primary group-hover:text-white" />
               </div>
-              <span className="text-[11px] font-black text-[var(--foreground)] leading-tight lowercase truncate">
+              <span className="text-[11px] font-black text-zinc-900 leading-tight lowercase truncate">
                 {cat.label}
               </span>
             </motion.button>
@@ -101,49 +133,92 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Promo Card - Simple & Compact */}
+      {/* Dynamic Hero Carousel */}
       <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative h-40 rounded-[32px] overflow-hidden group border border-[var(--border)] shadow-sm"
+        layout
+        className="relative h-48 rounded-[48px] overflow-hidden group border border-[#E9ECEF] shadow-2xl shadow-black/5 mx-1"
       >
-        <img 
-          src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=800" 
-          alt="Stadium" 
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex flex-col justify-center p-8 space-y-2">
-          <h4 className="text-2xl font-black text-white italic leading-none lowercase tracking-tight">unlock global vip</h4>
-          <p className="text-white/80 text-[10px] font-bold max-w-[200px] leading-tight lowercase tracking-tight">
-            get access to 99% accuracy predictions from expert analysts.
-          </p>
-          <button 
-            onClick={() => navigate('/subscription')}
-            className="mt-2 bg-premium-gradient text-white px-6 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest hover:scale-105 transition-all w-fit shadow-lg shadow-primary/25"
-          >
-            Upgrade now
-          </button>
+        <AnimatePresence mode="wait">
+          <motion.img 
+            key={currentHero}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 1 }}
+            src={HERO_IMAGES[currentHero]} 
+            alt="Football League" 
+            className="absolute inset-0 w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </AnimatePresence>
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-8 pb-6 space-y-3">
+          <div className="space-y-1">
+            <h4 className="text-3xl font-black text-white italic leading-none lowercase tracking-tighter">
+              {profile?.subscriptionTier === 'vip' ? 'Elite Terminal' : 'unlock global vip'}
+            </h4>
+            <p className="text-white/70 text-[11px] font-bold max-w-[240px] leading-relaxed lowercase tracking-tight">
+              {profile?.subscriptionTier === 'vip' 
+                ? 'you are now accessing high-probability algorithmic signals.' 
+                : 'get absolute access to 99% accuracy predictions from top analysts.'}
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            {profile?.subscriptionTier === 'vip' ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-yellow-500/20 border border-yellow-500/30 px-4 py-2 rounded-xl backdrop-blur-md">
+                   <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                   <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest lowercase">VIP ACTIVE</span>
+                </div>
+                {expiryMessage && (
+                  <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 px-4 py-2 rounded-xl backdrop-blur-md animate-pulse">
+                     <Clock className="w-3 h-3 text-red-500" />
+                     <span className="text-[10px] font-black text-red-500 uppercase tracking-widest lowercase">{expiryMessage}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button 
+                onClick={() => navigate('/subscription')}
+                className="bg-yellow-500 text-black px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] hover:scale-105 transition-all shadow-xl shadow-yellow-500/20 active:scale-95 lowercase"
+              >
+                Upgrade now
+              </button>
+            )}
+
+            <div className="flex gap-1.5">
+              {HERO_IMAGES.map((_, i) => (
+                <div 
+                  key={i} 
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                    currentHero === i ? "w-6 bg-white" : "bg-white/30"
+                  )} 
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </motion.div>
 
       {/* Predictions Section */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-4">
+      <section className="space-y-6 px-1">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-6">
             <button 
               onClick={() => setActiveTab('today')}
               className={cn(
                 "group relative transition-all",
-                activeTab === 'today' ? "opacity-100" : "opacity-40"
+                activeTab === 'today' ? "opacity-100" : "opacity-30 hover:opacity-50"
               )}
             >
               <div className="space-y-0.5 text-left">
-                <h3 className="text-lg font-black text-[var(--foreground)] leading-none lowercase tracking-tight">today's picks</h3>
-                <p className="text-[var(--muted-foreground)] text-[9px] font-black uppercase tracking-[0.2em] lowercase">live & upcoming</p>
+                <h3 className="text-2xl font-black text-zinc-900 leading-none lowercase italic tracking-tight">today's picks</h3>
+                <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] lowercase">live signals</p>
               </div>
               {activeTab === 'today' && (
-                <motion.div layoutId="tab-underline" className="absolute -bottom-2 left-0 right-0 h-1 bg-primary rounded-full" />
+                <motion.div layoutId="tab-underline" className="absolute -bottom-3 left-0 right-0 h-1.5 bg-primary rounded-full" />
               )}
             </button>
             
@@ -151,38 +226,38 @@ export default function Home() {
               onClick={() => setActiveTab('previous')}
               className={cn(
                 "group relative transition-all",
-                activeTab === 'previous' ? "opacity-100" : "opacity-40"
+                activeTab === 'previous' ? "opacity-100" : "opacity-30 hover:opacity-50"
               )}
             >
               <div className="space-y-0.5 text-left">
-                <h3 className="text-lg font-black text-[var(--foreground)] leading-none lowercase tracking-tight">previous tips</h3>
-                <p className="text-[var(--muted-foreground)] text-[9px] font-black uppercase tracking-[0.2em] lowercase">historical logs</p>
+                <h3 className="text-2xl font-black text-zinc-900 leading-none lowercase italic tracking-tight">previous tips</h3>
+                <p className="text-zinc-400 text-[9px] font-black uppercase tracking-[0.2em] lowercase">historic archive</p>
               </div>
               {activeTab === 'previous' && (
-                <motion.div layoutId="tab-underline" className="absolute -bottom-2 left-0 right-0 h-1 bg-primary rounded-full" />
+                <motion.div layoutId="tab-underline" className="absolute -bottom-3 left-0 right-0 h-1.5 bg-secondary rounded-full" />
               )}
             </button>
           </div>
           
           <div className="flex items-center gap-2">
             {activeTab === 'today' && (
-              <div className="p-2 bg-[var(--muted)]/50 rounded-xl">
-                 <div className="w-2 h-2 bg-win rounded-full animate-pulse shadow-[0_0_8px_rgba(0,200,83,0.5)]" />
+              <div className="p-3 bg-zinc-50 border border-zinc-100 rounded-2xl">
+                 <div className="w-2.5 h-2.5 bg-win rounded-full animate-pulse shadow-[0_0_12px_rgba(0,200,83,0.6)]" />
               </div>
             )}
             {activeTab === 'previous' && (
-              <div className="p-2 bg-[var(--muted)]/50 rounded-xl">
-                 <Trophy className="w-3 h-3 text-secondary" />
+              <div className="p-3 bg-zinc-50 border border-zinc-100 rounded-2xl">
+                 <Trophy className="w-4 h-4 text-zinc-400" />
               </div>
             )}
           </div>
         </div>
 
-        <div className="space-y-3 pt-2">
+        <div className="space-y-4 pt-4 px-1">
           {loading ? (
-             <div className="flex flex-col items-center justify-center py-20 gap-3">
-               <Loader2 className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-               <p className="text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em] lowercase">fetching latest tips...</p>
+             <div className="flex flex-col items-center justify-center py-24 gap-4">
+               <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
+               <p className="text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em] lowercase">syncing with terminal...</p>
              </div>
           ) : currentTips.length > 0 ? (
             currentTips.map((prediction: Prediction, index: number) => (
@@ -190,70 +265,72 @@ export default function Home() {
             ))
           ) : activeTab === 'today' ? (
             <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="py-16 text-center space-y-4 px-8 border-2 border-dashed border-[var(--border)] rounded-[32px]"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="py-24 text-center space-y-6 px-10 border-2 border-dashed border-zinc-100 rounded-[48px] bg-zinc-50/30"
             >
-              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-black/5 ring-1 ring-zinc-100">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-black lowercase tracking-tight">Analysing Markets...</h4>
-                <p className="text-[10px] text-[var(--muted-foreground)] font-medium leading-relaxed">
-                  Our professional analysts are still scanning global markets for high-probability signals. Please check back shortly for today's elite picks.
+              <div className="space-y-2">
+                <h4 className="text-xl font-black lowercase italic tracking-tight text-zinc-900">Analysing Markets...</h4>
+                <p className="text-[11px] text-zinc-400 font-bold leading-relaxed lowercase tracking-tight max-w-[240px] mx-auto">
+                  Our professional analysts are scanning global frequencies for high-probability signals. please bypass shortly for today's elite picks.
                 </p>
               </div>
             </motion.div>
           ) : (
-            <div className="py-20 text-center space-y-3">
-              <Trophy className="w-12 h-12 text-zinc-200 mx-auto" />
-              <p className="text-zinc-400 font-black text-[10px] uppercase tracking-widest lowercase">no historical logs available yet</p>
+            <div className="py-24 text-center space-y-4">
+              <div className="w-20 h-20 bg-zinc-50 border border-zinc-100 rounded-[32px] flex items-center justify-center mx-auto mb-2 opacity-50">
+                <Trophy className="w-8 h-8 text-zinc-300" />
+              </div>
+              <p className="text-zinc-400 font-black text-[10px] uppercase tracking-widest lowercase">historic archive is currently clearing</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Responsible Gambling Modal - Redesigned */}
+      {/* Responsible Gambling Modal - Refined */}
       <AnimatePresence>
         {showWarning && (
-          <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-24">
+          <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-28">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
               onClick={closeWarning}
             />
             <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              className="relative w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xl flex items-center gap-4"
+              initial={{ y: 200, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 200, opacity: 0, scale: 0.9 }}
+              transition={{ type: 'spring', damping: 20 }}
+              className="relative w-full bg-white border border-[#E9ECEF] rounded-[40px] p-6 shadow-2xl flex items-center gap-6"
             >
-              <div className="shrink-0 w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <div className="shrink-0 w-14 h-14 bg-amber-500/10 rounded-[20px] flex items-center justify-center shadow-inner border border-amber-500/20">
+                <AlertTriangle className="w-7 h-7 text-amber-500" />
               </div>
 
               <div className="flex-1 min-w-0">
-                <h3 className="text-xs font-bold text-[var(--foreground)] leading-tight">Notice: Game Responsibly</h3>
-                <p className="text-[10px] text-[var(--muted-foreground)] leading-tight truncate">
-                  Betting involves risk. Join our community for expert guidance and safe analysis.
+                <h3 className="text-sm font-black text-zinc-900 leading-none italic lowercase tracking-tight">Responsible Protocol</h3>
+                <p className="text-[11px] text-zinc-400 font-medium leading-relaxed mt-1 lowercase line-clamp-2">
+                  Market analysis involves variance. Join our secure relay for expert algorithmic guidance.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 px-2">
                 <button 
-                  onClick={() => window.open('https://chat.whatsapp.com/GgS9vG7y9W53L6I0V5nO5L', '_blank')}
-                  className="px-3 h-8 rounded-lg bg-[#25D366] text-white font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 transition-all"
+                  onClick={() => window.open('https://t.me/lucky_tips_official', '_blank')}
+                  className="h-12 w-12 rounded-2xl bg-[#0088cc] text-white flex items-center justify-center shadow-lg shadow-[#0088cc]/20 transition-all hover:scale-110 active:scale-90"
                 >
-                  <MessageSquare className="w-3 h-3" />
-                  Join
+                  <Send className="w-5 h-5" />
                 </button>
                 <button 
                   onClick={closeWarning}
-                  className="h-8 w-8 rounded-lg bg-[var(--muted)]/50 text-[var(--muted-foreground)] flex items-center justify-center hover:bg-[var(--muted)] transition-all"
+                  className="h-12 w-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center border border-zinc-200 transition-all hover:bg-zinc-200 active:scale-90"
                 >
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-5 h-5" />
                 </button>
               </div>
             </motion.div>

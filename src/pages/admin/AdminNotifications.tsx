@@ -18,6 +18,7 @@ import {
 import { rtdb } from '../../lib/firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
 import { formatDistanceToNow } from 'date-fns';
+import { recordLog } from '../../lib/adminUtils';
 
 export default function AdminNotifications() {
   const [broadcasts, setBroadcasts] = useState<any[]>([]);
@@ -66,6 +67,7 @@ export default function AdminNotifications() {
         isRead: false,
         createdAt: serverTimestamp()
       });
+      await recordLog('Pius Tech', 'notification', 'broadcast_sent', `Broadcast: ${formData.title} to ${target}`);
       setFormData({ title: '', message: '' });
     } catch (error) {
       console.error('RTDB Send Error:', error);

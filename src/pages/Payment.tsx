@@ -3,33 +3,54 @@ import { motion } from 'motion/react';
 import { ShieldCheck, ArrowLeft, Phone, CreditCard, ChevronRight, Zap } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
+import { ref, push, serverTimestamp, set } from 'firebase/database';
+import { rtdb } from '../lib/firebase';
 
 export default function Payment() {
   const [searchParams] = useSearchParams();
   const pkgId = searchParams.get('package') || 'weekly';
-  const { setPhoneNumber, setIsVip, phoneNumber } = useUser();
+  const amount = searchParams.get('amount') || '20000';
+  const { setPhoneNumber, setIsVip, phoneNumber, profile } = useUser();
   const [localPhone, setLocalPhone] = useState(phoneNumber);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!localPhone) return;
 
     setLoading(true);
-    // Simulate payment process
-    setTimeout(() => {
+    
+    try {
+      // Record payment in RTDB
+      const paymentRef = push(ref(rtdb, 'payments'));
+      await set(paymentRef, {
+        userId: profile?.uid || 'anonymous',
+        userName: profile?.displayName || 'Anonymous User',
+        userEmail: profile?.email || 'N/A',
+        amount: parseInt(amount),
+        packageId: pkgId,
+        phoneNumber: localPhone,
+        timestamp: serverTimestamp(),
+        status: 'completed',
+        currency: 'UGX'
+      });
+
       setPhoneNumber(localPhone);
       setSuccess(true);
       setLoading(false);
       
-      // Simulate activation
+      // Activation sequence
       setTimeout(() => {
         setIsVip(true);
         navigate('/vip');
       }, 2000);
-    }, 1500);
+    } catch (error) {
+      console.error('Payment Record Error:', error);
+      alert('Payment failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (

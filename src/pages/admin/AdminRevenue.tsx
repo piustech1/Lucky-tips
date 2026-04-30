@@ -14,45 +14,65 @@ import { cn } from '../../lib/utils';
 import { rtdb } from '../../lib/firebase';
 import { ref, onValue } from 'firebase/database';
 
-const data = [
-  { name: 'Mon', revenue: 420000, subscriptions: 12 },
-  { name: 'Tue', revenue: 310000, subscriptions: 8 },
-  { name: 'Wed', revenue: 680000, subscriptions: 18 },
-  { name: 'Thu', revenue: 450000, subscriptions: 15 },
-  { name: 'Fri', revenue: 720000, subscriptions: 22 },
-  { name: 'Sat', revenue: 1250000, subscriptions: 30 },
-  { name: 'Sun', revenue: 1840000, subscriptions: 42 },
-];
-
 export default function AdminRevenue() {
   const [stats, setStats] = React.useState({
     totalRevenue: 0,
     activeSubs: 0,
-    dailyAvg: 0
+    dailyAvg: 0,
+    weeklyData: [] as any[]
   });
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
+    const paymentsRef = ref(rtdb, 'payments');
     const usersRef = ref(rtdb, 'users');
-    const unsubscribe = onValue(usersRef, (snapshot) => {
+
+    const unsubscribePayments = onValue(paymentsRef, (snapshot) => {
+      const dataVal = snapshot.val() || {};
+      const payments = Object.values(dataVal) as any[];
+      
+      const totalRevenue = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      
+      // Calculate weekly trend
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weekly = [0, 0, 0, 0, 0, 0, 0];
+      
+      payments.forEach(p => {
+        if (p.timestamp) {
+          const date = new Date(p.timestamp);
+          weekly[date.getDay()] += (p.amount || 0);
+        }
+      });
+
+      const weeklyData = days.map((day, i) => ({
+        name: day,
+        revenue: weekly[i]
+      }));
+
+      setStats(prev => ({
+        ...prev,
+        totalRevenue,
+        weeklyData
+      }));
+    });
+
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
       const dataVal = snapshot.val() || {};
       const users = Object.values(dataVal) as any[];
       const activeSubs = users.filter((u: any) => u.subscriptionTier === 'vip').length;
       
-      // Price per sub is 50,000 UGX
-      const SUB_PRICE = 50000;
-      const totalRevenue = activeSubs * SUB_PRICE;
-      const dailyAvg = totalRevenue / 30;
-
-      setStats({
-        totalRevenue,
+      setStats(prev => ({
+        ...prev,
         activeSubs,
-        dailyAvg: Math.round(dailyAvg)
-      });
+        dailyAvg: Math.round(prev.totalRevenue / 30)
+      }));
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribePayments();
+      unsubscribeUsers();
+    };
   }, []);
 
   const totalRevenue = stats.totalRevenue;
@@ -118,9 +138,9 @@ export default function AdminRevenue() {
             <BarChart3 className="w-8 h-8 text-zinc-200" />
          </div>
 
-         <div className="h-80 w-full">
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
+              <BarChart data={stats.weeklyData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F3F5" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#ADB5BD', fontWeight: 'bold' }} />
                 <YAxis 

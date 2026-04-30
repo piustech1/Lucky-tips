@@ -45,11 +45,14 @@ export default function Signup() {
 
       // Create RTDB profile
       const fullPhone = `${formData.countryCode}${formData.phone}`;
+      const countryObj = COUNTRIES.find(c => c.code === formData.countryCode);
+      
       await set(ref(rtdb, `users/${user.uid}`), {
         uid: user.uid,
         email: user.email,
         displayName: formData.name,
         phoneNumber: fullPhone,
+        country: countryObj?.name || 'Uganda',
         photoURL: '',
         subscriptionTier: 'free',
         subscriptionExpiry: null,
