@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.piustechdev.luckytips",
+    "sha256_cert_fingerprints": ["DB:DE:74:8D:03:C0:02:94:73:8C:21:35:18:7A:2A:B2:95:3E:81:E2:09:10:2F:59:1E:97:ED:4A:E6:CE:10:62"]
+  }
+}]

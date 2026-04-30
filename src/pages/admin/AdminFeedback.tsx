@@ -27,7 +27,7 @@ export default function AdminFeedback() {
         const list = Object.entries(data).map(([id, val]: [string, any]) => ({
           id,
           ...val
-        })).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+        })).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
         setTickets(list);
       } else {
         setTickets([]);
@@ -138,7 +138,7 @@ export default function AdminFeedback() {
                         <p className={cn(
                           "text-[9px] font-black uppercase tracking-widest opacity-40 lowercase",
                           selectedTicket?.id === t.id ? "text-white" : "text-zinc-500"
-                        )}>{format(new Date(t.timestamp), 'HH:mm • dd MMM')}</p>
+                        )}>{t.createdAt ? format(new Date(t.createdAt), 'HH:mm • dd MMM') : 'N/A'}</p>
                      </div>
                      {t.status === 'resolved' && <CheckCircle2 className="w-4 h-4 text-win ml-auto" />}
                   </div>

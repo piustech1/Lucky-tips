@@ -78,21 +78,21 @@ export default function AdminNotifications() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[40px] border border-[#E9ECEF]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[var(--card)] p-8 rounded-[40px] border border-[var(--border)]">
         <div className="space-y-1">
-           <h3 className="text-2xl font-black lowercase tracking-tight italic">Push Intelligence</h3>
+           <h3 className="text-2xl font-black lowercase tracking-tight italic text-[var(--foreground)]">Push Intelligence</h3>
            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase">keep your community engaged at scale</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Composer */}
-        <div className="bg-white p-8 rounded-[40px] border border-[#E9ECEF] space-y-8">
+        <div className="bg-[var(--card)] p-8 rounded-[40px] border border-[var(--border)] space-y-8">
            <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                  <Send className="w-5 h-5 text-primary" />
               </div>
-              <h4 className="text-xl font-black italic lowercase tracking-tight">New Broadcast</h4>
+              <h4 className="text-xl font-black italic lowercase tracking-tight text-[var(--foreground)]">New Broadcast</h4>
            </div>
 
            <form className="space-y-6" onSubmit={handleSend}>
@@ -103,18 +103,18 @@ export default function AdminNotifications() {
                    value={formData.title}
                    onChange={(e) => setFormData({...formData, title: e.target.value})}
                    required
-                   className="w-full h-14 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl px-6 text-sm font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                   className="w-full h-14 bg-[var(--background)] border border-[var(--border)] rounded-2xl px-6 text-sm font-black text-[var(--foreground)] outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                  />
               </div>
               <div className="space-y-2">
                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Body Message</label>
                  <textarea 
                    rows={4}
-                   placeholder="Check out our expert analysis for today's big games. Stay winning with Lucky Tips!"
+                   placeholder="Check out our expert analysis for today's big games. Stay winning with Lucky Tip$!"
                    value={formData.message}
                    onChange={(e) => setFormData({...formData, message: e.target.value})}
                    required
-                   className="w-full bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl p-6 text-sm font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                   className="w-full bg-[var(--background)] border border-[var(--border)] rounded-2xl p-6 text-sm font-black text-[var(--foreground)] outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                  />
               </div>
 
@@ -126,7 +126,7 @@ export default function AdminNotifications() {
                       onClick={() => setTarget('all')}
                       className={cn(
                         "p-4 rounded-2xl flex flex-col items-center gap-2 transition-all active:scale-95",
-                        target === 'all' ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-[#F8F9FA]"
+                        target === 'all' ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-[var(--card)] border border-[var(--border)] text-zinc-400 hover:bg-[var(--muted)]"
                       )}
                     >
                        <Users className="w-5 h-5" />
@@ -137,7 +137,7 @@ export default function AdminNotifications() {
                       onClick={() => setTarget('vip')}
                       className={cn(
                         "p-4 rounded-2xl flex flex-col items-center gap-2 transition-all active:scale-95",
-                        target === 'vip' ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "bg-white border border-[#E9ECEF] text-zinc-400 hover:bg-[#F8F9FA]"
+                        target === 'vip' ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "bg-[var(--card)] border border-[var(--border)] text-zinc-400 hover:bg-[var(--muted)]"
                       )}
                     >
                        <Zap className="w-5 h-5" />
@@ -160,9 +160,9 @@ export default function AdminNotifications() {
 
         {/* Recent History */}
         <div className="space-y-6">
-           <h4 className="text-xl font-black italic lowercase tracking-tight ml-4 flex items-center gap-2">
+           <h4 className="text-xl font-black italic lowercase tracking-tight ml-4 flex items-center gap-2 text-[var(--foreground)]">
              Broadcast Logs
-             <div className="h-[1px] flex-1 bg-zinc-200" />
+             <div className="h-[1px] flex-1 bg-[var(--border)]" />
            </h4>
            
            {loading ? (
@@ -175,14 +175,14 @@ export default function AdminNotifications() {
               <motion.div 
                 key={broadcast.id}
                 layout
-                className="bg-white p-6 rounded-[32px] border border-[#E9ECEF] flex items-center gap-4 group hover:shadow-xl transition-all"
+                className="bg-[var(--card)] p-6 rounded-[32px] border border-[var(--border)] flex items-center gap-4 group hover:shadow-xl transition-all"
               >
-                 <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center shrink-0">
+                 <div className="w-12 h-12 rounded-2xl bg-[var(--background)] flex items-center justify-center shrink-0">
                     <Bell className="w-5 h-5 text-zinc-300" />
                  </div>
                  <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-sm lowercase tracking-tight leading-none mb-1 truncate">{broadcast.title}</h5>
-                    <p className="text-[10px] text-zinc-400 font-bold lowercase truncate tracking-tight">
+                    <h5 className="font-black text-sm lowercase tracking-tight leading-none mb-1 truncate text-[var(--foreground)]">{broadcast.title}</h5>
+                    <p className="text-[10px] text-[var(--muted-foreground)] font-bold lowercase truncate tracking-tight">
                        Sent to {broadcast.target === 'all' ? 'All Units' : 'VIP Sector'} • {broadcast.createdAt ? formatDistanceToNow(broadcast.createdAt) + ' ago' : 'just now'}
                     </p>
                  </div>

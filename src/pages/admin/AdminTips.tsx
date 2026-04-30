@@ -438,9 +438,9 @@ export default function AdminTips() {
                  </button>
               </div>
 
-              <form className="p-5 overflow-y-auto space-y-5 custom-scrollbar" onSubmit={(e) => { e.preventDefault(); handleAddTip(e); }}>
-                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    <div className="space-y-4">
+              <form className="p-4 overflow-y-auto space-y-4 custom-scrollbar" onSubmit={(e) => { e.preventDefault(); handleAddTip(e); }}>
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                                 <SearchableDropdown 
                                   label="Home Team" 
@@ -458,30 +458,28 @@ export default function AdminTips() {
                                 />
                              </div>
       
-                             <div className="space-y-2">
-                               <SearchableDropdown 
-                                 label="Competition" 
-                                 items={cachedLeagues} 
-                                 value={formData.league} 
-                                 logo={formData.leagueLogo}
-                                 onSelect={(item) => setFormData({...formData, league: item.name, leagueLogo: item.logo})} 
-                               />
-                             </div>
+                             <SearchableDropdown 
+                               label="Competition" 
+                               items={cachedLeagues} 
+                               value={formData.league} 
+                               logo={formData.leagueLogo}
+                               onSelect={(item) => setFormData({...formData, league: item.name, leagueLogo: item.logo})} 
+                             />
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                              <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Market Segment</label>
                              <select 
                                value={formData.category}
                                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                               className="w-full h-10 bg-zinc-50 border border-zinc-200 rounded-lg px-3 text-xs font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
+                               className="w-full h-9 bg-zinc-50 border border-zinc-200 rounded-lg px-2 text-[10px] font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
                              >
                                {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                              </select>
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                              <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Market Odds</label>
                              <div className="relative">
                                <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
@@ -489,13 +487,13 @@ export default function AdminTips() {
                                  placeholder="1.95"
                                  value={formData.odds}
                                  onChange={(e) => setFormData({...formData, odds: e.target.value})}
-                                 className="w-full h-10 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
+                                 className="w-full h-9 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
                                />
                              </div>
                           </div>
                        </div>
 
-                       <div className="space-y-1.5">
+                       <div className="space-y-1">
                           <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Selected Outcome</label>
                           <div className="relative">
                              <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
@@ -503,40 +501,40 @@ export default function AdminTips() {
                                placeholder="e.g. Both Teams To Score"
                                value={formData.tip}
                                onChange={(e) => setFormData({...formData, tip: e.target.value})}
-                               className="w-full h-10 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
+                               className="w-full h-9 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
                              />
                           </div>
                        </div>
 
                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                              <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Kick-off Date</label>
                              <input 
                                type="date"
                                value={formData.date}
                                onChange={(e) => setFormData({...formData, date: e.target.value})}
-                               className="w-full h-10 bg-zinc-50 border border-zinc-200 rounded-lg px-3 text-[10px] font-black outline-none focus:ring-2 focus:ring-primary/10 transition-all font-sans"
+                               className="w-full h-9 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 text-[10px] font-black text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/10 transition-all font-sans"
                              />
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                              <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Match Time</label>
                              <input 
                                type="time"
                                value={formData.time}
                                onChange={(e) => setFormData({...formData, time: e.target.value})}
-                               className="w-full h-10 bg-zinc-50 border border-zinc-200 rounded-lg px-3 text-[10px] font-black outline-none focus:ring-2 focus:ring-primary/10 transition-all font-sans"
+                               className="w-full h-9 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 text-[10px] font-black text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/10 transition-all font-sans"
                              />
                           </div>
                        </div>
                     </div>
                  </div>
 
-                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-zinc-100">
+                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-zinc-100">
                     <div className="flex items-center gap-4">
                        <label className="flex items-center gap-2 cursor-pointer group">
                           <div className={cn(
-                            "w-8 h-4 rounded-full relative transition-all duration-300",
-                            formData.isVip ? "bg-primary" : "bg-zinc-200"
+                             "w-8 h-4 rounded-full relative transition-all duration-300",
+                             formData.isVip ? "bg-primary" : "bg-zinc-200"
                           )}>
                              <input 
                                type="checkbox" 
@@ -556,9 +554,9 @@ export default function AdminTips() {
                     <button 
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full sm:w-auto h-12 px-10 bg-zinc-900 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-97 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                      className="w-full sm:w-auto h-11 px-8 bg-zinc-900 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-97 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                       {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                        Finalize Injection
                     </button>
                  </div>

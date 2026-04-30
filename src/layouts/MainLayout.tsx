@@ -48,7 +48,7 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
       if (navigator.share) {
         try {
           await navigator.share({ 
-            title: 'Lucky Tips', 
+            title: 'Lucky Tip$', 
             text: 'Get the best expert betting tips and analysis with Lucky Tip$!',
             url: window.location.origin 
           });
@@ -117,6 +117,18 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
       <main className="pt-20 pb-24 px-4 max-w-md mx-auto min-h-screen">
         <Outlet />
       </main>
+
+      {/* Floating WhatsApp Button */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => window.open('https://chat.whatsapp.com/H0Wt5wj3odY60J9CWS7TJH?mode=gi_t', '_blank')}
+        className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-2xl shadow-green-500/40 text-white border-2 border-white/20 hover:bg-[#22c35e] transition-colors"
+      >
+        <MessageSquare className="w-7 h-7" />
+      </motion.button>
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--background)]/95 backdrop-blur-xl border-t border-[var(--border)] px-4 h-20 max-w-md mx-auto flex items-center justify-between shadow-[0_-15px_30px_rgba(0,0,0,0.1)]">

@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { cn } from '../lib/utils';
+import Toast from '../components/Toast';
 
 const LOGO_URL = "https://i.postimg.cc/c1j7ByYH/1000856002-removebg-preview.png";
 
@@ -64,7 +65,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-t from-[#103D39] via-[#103D39]/40 to-transparent" />
         
         <div className="absolute top-10 right-6 left-6 flex items-center justify-between z-20">
-          <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-12 h-12 object-contain drop-shadow-xl" />
+          <img src={LOGO_URL} alt="Lucky Tip$ Logo" className="w-12 h-12 object-contain drop-shadow-xl" />
           <button 
             onClick={() => navigate('/')}
             className="px-5 py-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all shadow-lg"
@@ -88,13 +89,6 @@ export default function Login() {
       >
         <form onSubmit={handleSubmit} className="space-y-6 max-w-[340px] mx-auto">
           <div className="space-y-5">
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-[10px] font-bold lowercase">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
-              </div>
-            )}
-
             <InputField 
               label="Secret Login ID (Email)"
               icon={Mail}
@@ -146,11 +140,13 @@ export default function Login() {
           </button>
 
           <p className="text-center text-xs font-black text-white/30 lowercase tracking-tight">
-            New to Lucky Tips? {' '}
+            New to Lucky Tip$? {' '}
             <Link to="/signup" className="text-primary hover:underline underline-offset-4 decoration-primary/30">Claim Your Spot</Link>
           </p>
         </form>
       </motion.div>
+
+      <Toast message={error} onClose={() => setError(null)} />
     </div>
   );
 }

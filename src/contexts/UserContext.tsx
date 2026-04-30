@@ -14,6 +14,7 @@ interface UserProfile {
   subscriptionExpiry: string | null;
   isAdmin: boolean;
   createdAt: number | string;
+  sessionId?: string;
 }
 
 interface UserContextType {
@@ -37,12 +38,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setUser(firebaseUser);
       
       if (firebaseUser) {
+        // Handle Session Management (Single Device Login)
+        const currentSessionId = localStorage.getItem('lucky_tips_session_id');
+        if (!currentSessionId) {
+          const newSessionId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+          localStorage.setItem('lucky_tips_session_id', newSessionId);
+          await update(ref(rtdb, `users/${firebaseUser.uid}`), { sessionId: newSessionId });
+        }
+
         // Listen to profile changes in Realtime Database
         const profileRef = ref(rtdb, `users/${firebaseUser.uid}`);
         
         const unsubscribeProfile = onValue(profileRef, (snapshot) => {
           if (snapshot.exists()) {
-            setProfile(snapshot.val() as UserProfile);
+            const profileData = snapshot.val() as UserProfile;
+            const storedSessionId = localStorage.getItem('lucky_tips_session_id');
+
+            // If session IDs don't match, log out (Second device logged in)
+            if (profileData.sessionId && storedSessionId && profileData.sessionId !== storedSessionId) {
+              auth.signOut();
+              localStorage.removeItem('lucky_tips_session_id');
+              alert('You have been logged out because your account is active on another device.');
+              return;
+            }
+
+            setProfile(profileData);
           } else {
             console.log('No RTDB profile found for user');
           }

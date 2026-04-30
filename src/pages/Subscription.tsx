@@ -63,9 +63,9 @@ export default function Subscription() {
   const [activeIndex, setActiveIndex] = useState(1);
   const navigate = useNavigate();
 
-  const handleSelect = (pkgId: string, amount: string) => {
+  const handleSelect = (pkgId: string, amount: string, name: string) => {
     const rawAmount = amount.replace(/,/g, '');
-    navigate(`/payment?package=${pkgId}&amount=${rawAmount}`);
+    navigate(`/payment?package=${pkgId}&amount=${rawAmount}&name=${encodeURIComponent(name)}`);
   };
 
   return (
@@ -140,7 +140,7 @@ export default function Subscription() {
               </div>
 
               <button
-                onClick={() => handleSelect(pkg.id, pkg.price)}
+                onClick={() => handleSelect(pkg.id, pkg.price, pkg.name)}
                 className={cn(
                   "w-full py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95",
                   pkg.id === 'weekly' 

@@ -12,13 +12,13 @@ import { cn } from '../lib/utils';
 import { useUser } from '../contexts/UserContext';
 
 const HERO_IMAGES = [
-  "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=800", // Premier League
-  "https://images.unsplash.com/photo-1431324155629-1a6eda1eed2d?auto=format&fit=crop&q=80&w=800", // La Liga
-  "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=800", // Serie A
-  "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=800", // Bundesliga
-  "https://images.unsplash.com/photo-1518091043644-c1d445bcc97a?auto=format&fit=crop&q=80&w=800", // Ligue 1
-  "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=800", // Champions League
-  "https://images.unsplash.com/photo-1563299796-17596ed6b017?auto=format&fit=crop&q=80&w=800", // World Cup
+  "https://contentful-asset-proxy.sd.indazn.com/vhp9jnid12wf/77Jm8rRKCQwO3zTjgC7Vs9/b17dcf7af9cbd834fee6c6c12fc0a281/1440_x_509___Web-2.jpg", // La Liga
+  "https://e0.365dm.com/25/11/1600x900/skysports-premier-league-premier-league-fixtures_7086811.jpg?20251120150259", // Premier League
+  "https://assets.calciomercato.com/images/v3/blta84f8cfacf3a7bbc/seriea.jpg", // Serie A
+  "https://www.edcom.fr/upload/media/ligue-1-plus.webp", // Ligue 1
+  "https://image.discovery.indazn.com/ca/v2/ca/image?id=dd7e2d16-3c0d-4692-ad93-b19bece046f1&quality=70", // Bundesliga
+  "https://assets.goal.com/images/v3/blt9d7ef2ac7142bd5e/SPL_Winners_Losers.jpg", // Saudi Pro League
+  "https://assets.goal.com/images/v3/blt84cf5a40786d6483/MLS%20Salary%20Cap.jpg?auto=webp&format=pjpg&width=3840&quality=60", // MLS
 ];
 
 export default function Home() {
@@ -33,7 +33,7 @@ export default function Home() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentHero((prev) => (prev + 1) % HERO_IMAGES.length);
-    }, 5000);
+    }, 3000); // 3 seconds per slide
     return () => clearInterval(timer);
   }, []);
 
@@ -100,6 +100,30 @@ export default function Home() {
   const previousTips = predictions.filter(p => p.status !== 'pending');
   const currentTips = activeTab === 'today' ? todayTips : previousTips;
 
+  if (loading) {
+    return (
+      <div className="space-y-8 pb-10">
+        <div className="flex items-center justify-between px-6 pt-4">
+          <div className="space-y-2">
+            <div className="h-8 w-48 skeleton" />
+            <div className="h-3 w-32 skeleton" />
+          </div>
+          <div className="w-12 h-12 skeleton rounded-2xl" />
+        </div>
+        
+        <div className="h-48 mx-1 skeleton rounded-2xl" />
+        
+        <div className="flex gap-4 px-1 overflow-hidden">
+          {[1,2,3,4].map(i => <div key={i} className="h-10 w-24 skeleton shrink-0" />)}
+        </div>
+
+        <div className="space-y-4">
+           {[1,2,3].map(i => <div key={i} className="h-40 skeleton mx-2 rounded-[40px]" />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-10">
       {/* Hot Categories Horizontal Scroll */}
@@ -136,7 +160,7 @@ export default function Home() {
       {/* Dynamic Hero Carousel */}
       <motion.div 
         layout
-        className="relative h-48 rounded-[48px] overflow-hidden group border border-[#E9ECEF] shadow-2xl shadow-black/5 mx-1"
+        className="relative h-48 rounded-xl overflow-hidden group border border-[#E9ECEF] shadow-2xl shadow-black/5 mx-1"
       >
         <AnimatePresence mode="wait">
           <motion.img 
@@ -293,44 +317,35 @@ export default function Home() {
       {/* Responsible Gambling Modal - Refined */}
       <AnimatePresence>
         {showWarning && (
-          <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-28">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
-              onClick={closeWarning}
-            />
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-zinc-900/40 backdrop-blur-xl">
             <motion.div
-              initial={{ y: 200, opacity: 0, scale: 0.9 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 200, opacity: 0, scale: 0.9 }}
-              transition={{ type: 'spring', damping: 20 }}
-              className="relative w-full bg-white border border-[#E9ECEF] rounded-[40px] p-6 shadow-2xl flex items-center gap-6"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="w-full max-w-sm bg-white border border-[#E9ECEF] rounded-[48px] p-10 text-center space-y-8 relative overflow-hidden shadow-[0_0_100px_rgba(0,191,166,0.15)]"
             >
-              <div className="shrink-0 w-14 h-14 bg-amber-500/10 rounded-[20px] flex items-center justify-center shadow-inner border border-amber-500/20">
-                <AlertTriangle className="w-7 h-7 text-amber-500" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full" />
+              <div className="w-20 h-20 bg-amber-500/10 rounded-[32px] flex items-center justify-center mx-auto border border-amber-500/20">
+                <AlertTriangle className="w-10 h-10 text-amber-500" />
               </div>
-
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-black text-zinc-900 leading-none italic lowercase tracking-tight">Responsible Protocol</h3>
-                <p className="text-[11px] text-zinc-400 font-medium leading-relaxed mt-1 lowercase line-clamp-2">
-                  Market analysis involves variance. Join our secure relay for expert algorithmic guidance.
+              <div className="space-y-3">
+                <h3 className="text-3xl font-black lowercase italic tracking-tight leading-none text-zinc-900">Market Protocol</h3>
+                <p className="text-zinc-400 text-xs font-bold leading-relaxed lowercase tracking-tight">
+                  Lucky Tip$ is for intelligence and entertainment purposes. Sports involve risk. Play responsibly. 18+.
                 </p>
               </div>
-
-              <div className="flex items-center gap-3 px-2">
-                <button 
-                  onClick={() => window.open('https://t.me/lucky_tips_official', '_blank')}
-                  className="h-12 w-12 rounded-2xl bg-[#0088cc] text-white flex items-center justify-center shadow-lg shadow-[#0088cc]/20 transition-all hover:scale-110 active:scale-90"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
+              <div className="space-y-3">
                 <button 
                   onClick={closeWarning}
-                  className="h-12 w-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center border border-zinc-200 transition-all hover:bg-zinc-200 active:scale-90"
+                  className="w-full h-16 bg-zinc-900 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
-                  <XCircle className="w-5 h-5" />
+                  Initiate Sync
+                </button>
+                <button 
+                  onClick={() => window.open('https://chat.whatsapp.com/H0Wt5wj3odY60J9CWS7TJH?mode=gi_t', '_blank')}
+                  className="w-full text-[10px] font-black text-primary uppercase tracking-widest lowercase hover:underline underline-offset-4"
+                >
+                  Join Telegram Commms
                 </button>
               </div>
             </motion.div>

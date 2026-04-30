@@ -7,6 +7,7 @@ import { ref, set, update, get } from 'firebase/database';
 import { auth, rtdb } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { cn } from '../lib/utils';
+import Toast from '../components/Toast';
 
 const COUNTRIES = [
   { code: '+256', name: 'Uganda', flag: '🇺🇬' },
@@ -131,11 +132,11 @@ export default function Signup() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-12 h-12 object-contain drop-shadow-xl" />
+          <img src={LOGO_URL} alt="Lucky Tip$ Logo" className="w-12 h-12 object-contain drop-shadow-xl" />
         </div>
 
         <div className="absolute bottom-6 left-10 right-10 text-center">
-            <h1 className="text-3xl font-black text-white italic lowercase tracking-tight drop-shadow-lg">Join Lucky Tips</h1>
+            <h1 className="text-3xl font-black text-white italic lowercase tracking-tight drop-shadow-lg">Join Lucky Tip$</h1>
         </div>
       </div>
 
@@ -147,13 +148,6 @@ export default function Signup() {
       >
         <form onSubmit={handleSubmit} className="space-y-5 max-w-[340px] mx-auto">
           <div className="space-y-4 pt-6">
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-[10px] font-bold lowercase">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
-              </div>
-            )}
-
             <InputField 
               label="Full Name"
               icon={User}
@@ -251,6 +245,8 @@ export default function Signup() {
           </p>
         </form>
       </motion.div>
+
+      <Toast message={error} onClose={() => setError(null)} />
     </div>
   );
 }

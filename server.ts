@@ -92,7 +92,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Lucky Tips Server running on http://localhost:${PORT}`);
+    console.log(`Lucky Tip$ Server running on http://localhost:${PORT}`);
   });
 }
 

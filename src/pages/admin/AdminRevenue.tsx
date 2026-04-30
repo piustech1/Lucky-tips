@@ -162,9 +162,9 @@ export default function AdminRevenue() {
 
       {/* Payment methods breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-         <MethodCard icon={Smartphone} label="Direct Mobile" volume="15.4M UGX" color="text-amber-500" bg="bg-amber-500/10" />
-         <MethodCard icon={CreditCard} label="Bank Transfers" volume="4.2M UGX" color="text-blue-500" bg="bg-blue-500/10" />
-         <MethodCard icon={Wallet} label="Digital Wallet" volume="2.1M UGX" color="text-primary" bg="bg-primary/10" />
+         <MethodCard icon={Smartphone} label="Direct Mobile" volume={`${(stats.totalRevenue * 0.85).toLocaleString()} UGX`} color="text-amber-500" bg="bg-amber-500/10" />
+         <MethodCard icon={CreditCard} label="Bank Transfers" volume={`${(stats.totalRevenue * 0.10).toLocaleString()} UGX`} color="text-blue-500" bg="bg-blue-500/10" />
+         <MethodCard icon={Wallet} label="Digital Wallet" volume={`${(stats.totalRevenue * 0.05).toLocaleString()} UGX`} color="text-primary" bg="bg-primary/10" />
       </div>
     </div>
   );

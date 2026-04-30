@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Sections from './pages/Sections';
 import VIP from './pages/VIP';
@@ -43,6 +43,16 @@ import AdminMarketIntel from './pages/admin/AdminMarketIntel';
 import AdminFeedback from './pages/admin/AdminFeedback';
 import AdminLogoManager from './pages/admin/AdminLogoManager';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function AppContent() {
   const { user, loading, profile } = useUser();
   const isAuthenticated = !!user;
@@ -61,6 +71,7 @@ function AppContent() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Onboarding Route */}
         <Route 

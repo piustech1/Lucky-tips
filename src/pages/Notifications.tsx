@@ -1,15 +1,41 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Bell, CheckCircle2, AlertCircle, Info, Clock, Loader2 } from 'lucide-react';
+import { Bell, CheckCircle2, AlertCircle, Info, Clock, Loader2, Crown, ArrowRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ref, onValue, query, orderByChild, limitToLast, update } from 'firebase/database';
 import { rtdb } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
+import { useUser } from '../contexts/UserContext';
 
 export default function Notifications() {
+  const { profile } = useUser();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expiryAlert, setExpiryAlert] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (profile?.subscriptionExpiry) {
+      const expiryDate = new Date(profile.subscriptionExpiry);
+      const now = new Date();
+      const diffTime = expiryDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 0) {
+        setExpiryAlert({
+          title: 'VIP Plan Expired',
+          message: 'Your access to premium analytics has ended. Renew now to stay ahead.',
+          type: 'alert'
+        });
+      } else if (diffDays <= 3) {
+        setExpiryAlert({
+          title: 'VIP Expiry Approaching',
+          message: `Your elite access expires in ${diffDays} day${diffDays > 1 ? 's' : ''}. Avoid disruption by renewing early.`,
+          type: 'alert'
+        });
+      }
+    }
+  }, [profile]);
 
   useEffect(() => {
     // Clear badge count
@@ -70,6 +96,33 @@ export default function Notifications() {
       </div>
 
       <div className="space-y-3 px-4">
+        {expiryAlert && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-5 rounded-3xl bg-primary-dark text-white border border-primary/30 shadow-xl shadow-primary/20 relative overflow-hidden group mb-6"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Crown className="w-16 h-16 rotate-12" />
+            </div>
+            <div className="relative z-10 flex gap-4">
+              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
+                <AlertCircle className="w-6 h-6 text-yellow-500" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-black text-sm lowercase italic">{expiryAlert.title}</h4>
+                <p className="text-[11px] font-bold text-white/70 tracking-tight leading-tight lowercase">{expiryAlert.message}</p>
+                <button 
+                  onClick={() => window.location.href = '/subscription'}
+                  className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:text-white transition-colors"
+                >
+                  Renew Action <ArrowRight className="w-3 h-3 text-primary animate-bounce-x" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {loading ? (
            <div className="flex flex-col items-center justify-center py-24 gap-4">
               <Loader2 className="w-10 h-10 animate-spin text-primary" />

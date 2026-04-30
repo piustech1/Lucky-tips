@@ -8,6 +8,7 @@ import { rtdb } from '../lib/firebase';
 
 export default function Payment() {
   const [searchParams] = useSearchParams();
+  const pkgName = searchParams.get('name') || 'Weekly Pack';
   const pkgId = searchParams.get('package') || 'weekly';
   const amount = searchParams.get('amount') || '20000';
   const { setPhoneNumber, setIsVip, phoneNumber, profile } = useUser();
@@ -95,11 +96,11 @@ export default function Payment() {
             <div className="relative z-10 space-y-6">
               <div className="space-y-1">
                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest lowercase">Plan Selected</span>
-                <h4 className="text-2xl font-black capitalize lowercase italic tracking-tight">{pkgId} Package</h4>
+                <h4 className="text-2xl font-black capitalize lowercase italic tracking-tight">{pkgName}</h4>
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-5 h-5 text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
-                <span className="font-black text-2xl tracking-tighter">5,000 UGX</span>
+                <span className="font-black text-2xl tracking-tighter">{parseInt(amount).toLocaleString()} UGX</span>
                 <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">ONE-TIME</span>
               </div>
             </div>

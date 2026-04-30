@@ -57,7 +57,7 @@ export default function Profile() {
       </div>
 
       <div className="flex justify-center pt-8 relative z-10">
-         <img src={LOGO_URL} alt="Lucky Tips Logo" className="w-16 h-16 object-contain drop-shadow-xl" />
+         <img src={LOGO_URL} alt="Lucky Tip$ Logo" className="w-16 h-16 object-contain drop-shadow-xl" />
       </div>
 
       {/* Profile Header */}

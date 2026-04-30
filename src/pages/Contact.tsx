@@ -1,106 +1,230 @@
-import { motion } from 'motion/react';
-import { Send, MessageCircle, Mail, MapPin, ExternalLink, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Send, MessageCircle, Mail, MapPin, User, ChevronDown, CheckCircle2, Clock, ShieldCheck, Phone } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function Contact() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: 'Payment Issue',
+    message: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    // Simulate API call
+    await new Promise(r => setTimeout(r, 2000));
+    setIsLoading(false);
+    setIsSent(true);
+    setTimeout(() => setIsSent(false), 5000);
+  };
+
   const contactOptions = [
     {
-      id: 'telegram',
-      title: 'intelligence relay',
-      desc: 'Join our private frequency for real-time algorithmic updates and market discussion.',
-      icon: Send,
-      color: 'bg-[#0088cc]',
-      link: 'https://t.me/lucky_tips_official',
-      label: '@lucky_tip$_official',
-      btnLabel: 'Join Relay'
+      id: 'whatsapp',
+      title: 'WhatsApp VIP',
+      status: 'Replies instantly',
+      icon: MessageCircle,
+      color: 'text-[#25D366]',
+      bg: 'bg-[#25D366]/10',
+      link: 'https://wa.me/something',
     },
     {
-      id: 'whatsapp',
-      title: 'direct terminal',
-      desc: 'High-priority support and exclusive elite predictions sent directly to your device.',
-      icon: MessageCircle,
-      color: 'bg-[#25D366]',
-      link: 'https://wa.me/something',
-      label: 'Secure Chat',
-      btnLabel: 'Open Comms'
+      id: 'telegram',
+      title: 'Telegram Intel',
+      status: 'High priority',
+      icon: Send,
+      color: 'text-[#0088cc]',
+      bg: 'bg-[#0088cc]/10',
+      link: 'https://t.me/lucky_tips_official',
     },
     {
       id: 'email',
-      title: 'corporate node',
-      desc: 'For strategic partnerships, advertising, and administrative node inquiries.',
+      title: 'Email Relay',
+      status: '2-4 hours',
       icon: Mail,
-      color: 'bg-zinc-900',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
       link: 'mailto:support@luckytips.com',
-      label: 'ops@luckytip$.com',
-      btnLabel: 'Transmit'
+    },
+    {
+      id: 'phone',
+      title: 'Hotline',
+      status: '24/7 Support',
+      icon: Phone,
+      color: 'text-zinc-500',
+      bg: 'bg-zinc-100',
+      link: 'tel:+1234567890',
     }
   ];
 
   return (
-    <div className="space-y-10 pb-12 px-2">
-      <div className="flex items-center justify-between px-6 pt-4">
-        <div className="space-y-0.5">
-          <h2 className="text-3xl font-black tracking-tight text-zinc-900 leading-none lowercase italic">Comms Center</h2>
-          <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] lowercase">Establish secure connections</p>
-        </div>
-        <div className="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center shadow-inner border border-zinc-200">
-          <MessageCircle className="w-5 h-5 text-zinc-400" />
-        </div>
+    <div className="space-y-12 pb-24 px-4 pt-6">
+      {/* Header */}
+      <div className="space-y-2 text-center">
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-[10px] font-black uppercase tracking-[0.3em] text-primary"
+        >
+          Contact Support Anytime
+        </motion.p>
+        <motion.h2 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-4xl font-black italic lowercase tracking-tight text-zinc-900"
+        >
+          Comms Center
+        </motion.h2>
       </div>
 
-      <div className="space-y-4 px-2">
-        {contactOptions.map((option, index) => (
-          <motion.a
-            key={option.id}
-            href={option.link}
-            target="_blank"
-            rel="noreferrer"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.05 }}
-            className="group relative block bg-white border border-[#E9ECEF] rounded-[40px] p-8 shadow-sm hover:shadow-2xl hover:shadow-black/5 transition-all duration-500"
-          >
-            <div className="flex gap-6">
-              <div className={cn(
-                "shrink-0 w-20 h-20 rounded-[28px] flex items-center justify-center shadow-xl transition-all group-hover:-translate-y-2 group-hover:rotate-6", 
-                option.color
-              )}>
-                {option.id === 'telegram' ? (
-                  <svg className="w-10 h-10 text-white fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.35-.99.53-1.41.52-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.89.03-.25.38-.51 1.05-.78 4.12-1.79 6.87-2.97 8.25-3.55 3.92-1.64 4.73-1.92 5.27-1.93.12 0 .38.03.55.17.14.12.18.28.2.46.01.07.02.24 0 .32z"/></svg>
-                ) : option.id === 'whatsapp' ? (
-                  <svg className="w-10 h-10 text-white fill-current" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01C17.18 3.03 14.69 2 12.04 2zm5.82 14.02c-.25.72-1.48 1.35-2.04 1.43-.51.08-1.18.15-3.41-.77-2.81-1.16-4.63-4.03-4.77-4.22-.14-.19-1.14-1.51-1.14-2.89 0-1.38.72-2.05 1-2.35.25-.26.54-.33.72-.33.15 0 .3 0 .42.01.14 0 .32-.05.5.38.19.46.64 1.57.7 1.69.06.12.1.28.02.46-.08.18-.12.3-.24.45l-.36.42c-.12.14-.26.29-.11.54.15.25.66 1.09 1.42 1.76.97.87 1.78 1.13 2.04 1.26.25.13.4.11.54-.05.15-.16.64-.74.82-1 .18-.25.35-.21.58-.12.23.09 1.47.69 1.73.81.25.13.42.19.48.3.06.11.06.64-.17 1.34z"/></svg>
-                ) : (
-                  <option.icon className="w-10 h-10 text-white" />
-                )}
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Contact Form Card */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-white border border-[#E9ECEF] rounded-[48px] p-8 shadow-2xl shadow-black/5 relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full" />
+          
+          <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+            <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Identify Marker</label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-primary transition-colors" />
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="Full Name"
+                    className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl py-4 pl-12 pr-4 text-zinc-900 outline-none focus:ring-4 focus:ring-primary/10 transition-all font-black text-xs lowercase"
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  />
+                </div>
               </div>
-              <div className="flex-1 space-y-1.5">
-                <h3 className="text-2xl font-black text-zinc-900 lowercase italic tracking-tight leading-none">{option.title}</h3>
-                <p className="text-zinc-500 text-[11px] font-medium leading-relaxed lowercase tracking-tight">{option.desc}</p>
-                
-                <div className="flex items-center justify-between pt-5">
-                  <span className="text-[10px] font-black text-primary uppercase tracking-widest tabular-nums lowercase">{option.label}</span>
-                  <div className="h-10 px-6 bg-zinc-50 border border-zinc-100 rounded-xl group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all flex items-center justify-center">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] lowercase">{option.btnLabel}</span>
-                  </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Communication Channel</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 group-focus-within:text-primary transition-colors" />
+                  <input 
+                    required
+                    type="email" 
+                    placeholder="Your Email"
+                    className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl py-4 pl-12 pr-4 text-zinc-900 outline-none focus:ring-4 focus:ring-primary/10 transition-all font-black text-xs lowercase"
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  />
                 </div>
               </div>
             </div>
-          </motion.a>
-        ))}
-      </div>
 
-      <div className="mx-4 bg-zinc-900 border border-zinc-800 rounded-[48px] p-10 text-center space-y-8 relative overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 blur-[80px]" />
-        <div className="w-20 h-20 bg-white/5 rounded-[32px] flex items-center justify-center mx-auto border border-white/10 shadow-inner group-hover:scale-110 transition-transform">
-          <MapPin className="w-10 h-10 text-primary" />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Intelligence Subject</label>
+              <div className="relative">
+                <select 
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl py-4 pl-6 pr-12 text-zinc-900 outline-none focus:ring-4 focus:ring-primary/10 transition-all font-black text-xs appearance-none lowercase"
+                  onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                >
+                  <option>Payment Issue</option>
+                  <option>Tip Inquiry</option>
+                  <option>Account Help</option>
+                  <option>Bug Report</option>
+                  <option>Other Intelligence</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Detailed Matrix (Message)</label>
+              <textarea 
+                required
+                rows={4}
+                placeholder="Infect the terminal with your findings..."
+                className="w-full bg-zinc-50 border border-zinc-100 rounded-[32px] p-6 text-zinc-900 outline-none focus:ring-4 focus:ring-primary/10 transition-all font-black text-xs lowercase resize-none min-h-[140px]"
+                onChange={(e) => setFormData({...formData, message: e.target.value})}
+              />
+            </div>
+
+            <button 
+              disabled={isLoading}
+              className="w-full h-16 bg-zinc-900 text-white rounded-[24px] font-black flex items-center justify-center gap-4 shadow-2xl shadow-black/20 disabled:opacity-50 transition-all active:scale-[0.97] hover:bg-black group"
+            >
+              {isLoading ? (
+                <div className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+              ) : isSent ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-win" />
+                  <span className="text-xs tracking-[0.2em] uppercase">Sent Successfully</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs tracking-[0.2em] uppercase">Transmit Intel</span>
+                  <Send className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                </>
+              )}
+            </button>
+          </form>
+        </motion.div>
+
+        {/* Quick Help & Extra Info */}
+        <div className="space-y-8">
+          <div className="grid grid-cols-2 gap-4">
+            {contactOptions.map((opt, i) => (
+              <motion.a
+                key={opt.id}
+                href={opt.link}
+                target="_blank"
+                rel="noreferrer"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white border border-[#E9ECEF] p-6 rounded-[32px] shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all group overflow-hidden relative"
+              >
+                <div className={cn("absolute -top-4 -right-4 w-12 h-12 rounded-full blur-2xl opacity-20", opt.color.replace('text', 'bg'))} />
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110", opt.bg)}>
+                  <opt.icon className={cn("w-6 h-6", opt.color)} />
+                </div>
+                <h4 className="text-sm font-black text-zinc-900 lowercase italic leading-none truncate">{opt.title}</h4>
+                <p className="text-[10px] text-zinc-400 font-bold mt-2 lowercase">{opt.status}</p>
+              </motion.a>
+            ))}
+          </div>
+
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-zinc-900 rounded-[40px] p-8 text-white relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl" />
+            <div className="space-y-6 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
+                   <Clock className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                   <h5 className="text-sm font-black lowercase italic">Operational Hours</h5>
+                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">24/7 Global Signal Active</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
+                   <ShieldCheck className="w-5 h-5 text-win" />
+                </div>
+                <div>
+                   <h5 className="text-sm font-black lowercase italic">Fast Response Node</h5>
+                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Ensuring you never miss winning signal$</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
-        <div className="space-y-2 relative z-10">
-          <h4 className="font-black text-white text-2xl lowercase leading-none italic tracking-tight">London Terminal</h4>
-          <p className="text-zinc-500 text-[11px] font-black uppercase tracking-widest lowercase">HQ Global Node / United Kingdom</p>
-        </div>
-        <button className="relative z-10 w-full h-14 bg-white/5 border border-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/10 transition-all lowercase">
-          Browse Global Offices
-        </button>
       </div>
     </div>
   );

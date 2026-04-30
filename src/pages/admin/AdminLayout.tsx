@@ -29,7 +29,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans flex antialiased selection:bg-primary/20">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans flex antialiased selection:bg-primary/20">
       {/* Sidebar Overlay for Mobile/Drawer effect */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -51,9 +51,9 @@ export default function AdminLayout() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -320, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 left-0 w-80 bg-white border-r border-[#E9ECEF] z-50 flex flex-col shadow-2xl shadow-black/10"
+            className="fixed inset-y-0 left-0 w-80 bg-[var(--card)] border-r border-[var(--border)] z-50 flex flex-col shadow-2xl shadow-black/10"
           >
-            <div className="p-8 border-b border-[#E9ECEF]">
+            <div className="p-8 border-b border-[var(--border)]">
               <div className="flex items-center justify-between mb-6">
                 <div 
                   className="flex items-center gap-3 cursor-pointer group"
@@ -70,14 +70,14 @@ export default function AdminLayout() {
                       >
                         lucky
                       </span>
-                      <span className="text-[#1A1A1A]">panel</span>
+                      <span className="text-[var(--foreground)]">panel</span>
                     </h1>
                     <p className="text-[9px] font-black uppercase tracking-[0.1em] text-zinc-400 -mt-1 lowercase">management engine v2</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 rounded-xl bg-zinc-50 text-zinc-400 hover:text-zinc-600 transition-all active:scale-90"
+                  className="p-2 rounded-xl bg-[var(--background)] text-zinc-400 hover:text-zinc-600 transition-all active:scale-90"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -120,10 +120,10 @@ export default function AdminLayout() {
               ))}
             </nav>
 
-            <div className="p-6 border-t border-[#E9ECEF] bg-[#F8F9FA]/50">
+            <div className="p-6 border-t border-[var(--border)] bg-[var(--background)]/50">
               <button 
                 onClick={() => navigate('/')}
-                className="w-full h-14 bg-white border border-[#E9ECEF] rounded-2xl flex items-center justify-center gap-3 text-zinc-900 font-black text-xs uppercase tracking-widest hover:bg-[#F1F3F5] hover:border-zinc-300 transition-all active:scale-95 shadow-sm"
+                className="w-full h-14 bg-[var(--card)] border border-[var(--border)] rounded-2xl flex items-center justify-center gap-3 text-[var(--foreground)] font-black text-xs uppercase tracking-widest hover:bg-[var(--muted)] hover:border-zinc-300 transition-all active:scale-95 shadow-sm"
               >
                 <LogOut className="w-4 h-4 text-zinc-400" />
                 Exit Panel
@@ -136,19 +136,19 @@ export default function AdminLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#E9ECEF] px-8 flex items-center justify-between sticky top-0 z-30">
+        <header className="h-20 bg-[var(--card)]/80 backdrop-blur-md border-b border-[var(--border)] px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(true)}
               className={cn(
-                "p-2.5 rounded-xl bg-[#F1F3F5] text-zinc-600 hover:bg-[#E9ECEF] transition-all active:scale-90",
+                "p-2.5 rounded-xl bg-[var(--muted)] text-zinc-600 hover:bg-[var(--accent)] transition-all active:scale-90",
                 isSidebarOpen && "opacity-0 pointer-events-none"
               )}
             >
               <Menu className="w-5 h-5" />
             </button>
             <div>
-               <h2 className="text-xl font-black lowercase tracking-tight text-[#1A1A1A]">lucky dashboard</h2>
+               <h2 className="text-xl font-black lowercase tracking-tight text-[var(--foreground)]">lucky dashboard</h2>
                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest -mt-1 lowercase">live system overview</p>
             </div>
           </div>
@@ -157,10 +157,10 @@ export default function AdminLayout() {
           <div className="flex items-center gap-6">
             <div className="hidden md:flex flex-col items-right text-right">
                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 leading-none mb-1 lowercase">system admin</p>
-               <p className="text-sm font-black text-[#1A1A1A] lowercase tracking-tight">pius tech</p>
+               <p className="text-sm font-black text-[var(--foreground)] lowercase tracking-tight">pius tech</p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-premium-gradient p-[1px]">
-               <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center overflow-hidden">
+               <div className="w-full h-full bg-[var(--card)] rounded-[14px] flex items-center justify-center overflow-hidden">
                   <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Pius" alt="Admin" className="w-full h-full object-cover" />
                </div>
             </div>

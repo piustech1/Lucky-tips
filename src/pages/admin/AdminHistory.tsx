@@ -58,7 +58,7 @@ export default function AdminHistory() {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Search & Filter Bar */}
-      <div className="bg-white p-8 rounded-[40px] border border-[#E9ECEF] flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-[var(--card)] p-8 rounded-[40px] border border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col sm:flex-row items-center gap-4">
            <div className="relative group">
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
@@ -66,7 +66,7 @@ export default function AdminHistory() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="h-12 w-48 bg-[#F8F9FA] border border-[#E9ECEF] rounded-2xl pl-12 pr-4 text-xs font-black outline-none focus:ring-2 focus:ring-primary/20 hover:border-zinc-300 transition-all"
+                className="h-12 w-48 bg-[var(--background)] border border-[var(--border)] rounded-2xl pl-12 pr-4 text-xs font-black text-[var(--foreground)] outline-none focus:ring-2 focus:ring-primary/20 hover:border-zinc-300 transition-all cursor-pointer"
               />
            </div>
            <div className="flex gap-2">
@@ -74,7 +74,7 @@ export default function AdminHistory() {
                 onClick={() => setSelectedDate(format(new Date(), 'yyyy-MM-dd'))}
                 className={cn(
                   "h-12 px-5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all lowercase",
-                  selectedDate === format(new Date(), 'yyyy-MM-dd') ? "bg-primary text-white" : "bg-[#F8F9FA] text-zinc-400"
+                  selectedDate === format(new Date(), 'yyyy-MM-dd') ? "bg-primary text-white" : "bg-[var(--muted)] text-zinc-400"
                 )}
               >
                 Today
@@ -83,7 +83,7 @@ export default function AdminHistory() {
                 onClick={() => setSelectedDate(format(subDays(new Date(), 1), 'yyyy-MM-dd'))}
                 className={cn(
                   "h-12 px-5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all lowercase",
-                  selectedDate === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? "bg-primary text-white" : "bg-[#F8F9FA] text-zinc-400"
+                  selectedDate === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? "bg-primary text-white" : "bg-[var(--muted)] text-zinc-400"
                 )}
               >
                 Yesterday
@@ -92,7 +92,7 @@ export default function AdminHistory() {
         </div>
 
         <div className="flex items-center gap-3">
-           <h3 className="text-xl font-black lowercase tracking-tight italic">Performance History</h3>
+           <h3 className="text-xl font-black lowercase tracking-tight italic text-[var(--foreground)]">Performance History</h3>
            <History className="w-6 h-6 text-zinc-200" />
         </div>
       </div>
@@ -127,7 +127,7 @@ export default function AdminHistory() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ delay: index * 0.05 }}
-                  className="bg-white p-6 rounded-[32px] border border-[#E9ECEF] flex items-center justify-between group hover:shadow-xl hover:shadow-black/5 transition-all"
+                  className="bg-[var(--card)] p-6 rounded-[32px] border border-[var(--border)] flex items-center justify-between group hover:shadow-xl hover:shadow-black/5 transition-all"
                 >
                   <div className="flex items-center gap-5">
                     <div className={cn(
@@ -179,14 +179,14 @@ export default function AdminHistory() {
 
 function StatsCard({ label, value, icon: Icon, color }: any) {
   return (
-    <div className="p-6 bg-white border border-[#E9ECEF] rounded-3xl group hover:shadow-xl transition-all">
+    <div className="p-6 bg-[var(--card)] border border-[var(--border)] rounded-3xl group hover:shadow-xl transition-all">
        <div className="flex items-center gap-4">
           <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-opacity-30", color)}>
              <Icon className="w-5 h-5" />
           </div>
           <div>
-             <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1 lowercase">{label}</p>
-             <p className="text-xl font-black text-[#1A1A1A] tracking-tighter">{value}</p>
+             <p className="text-[8px] font-black text-[var(--muted-foreground)] uppercase tracking-widest leading-none mb-1 lowercase">{label}</p>
+             <p className="text-xl font-black text-[var(--foreground)] tracking-tighter">{value}</p>
           </div>
        </div>
     </div>

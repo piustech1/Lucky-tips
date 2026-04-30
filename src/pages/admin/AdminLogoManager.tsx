@@ -178,14 +178,14 @@ export default function AdminLogoManager() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter lowercase text-[#1A1A1A]">logo manager</h1>
-          <p className="text-zinc-400 text-sm font-bold uppercase tracking-widest mt-1 lowercase">api-football synchronization engine</p>
+          <h1 className="text-4xl font-black tracking-tighter lowercase text-[var(--foreground)]">logo manager</h1>
+          <p className="text-zinc-400 text-sm font-bold uppercase tracking-widest mt-1 lowercase text-[var(--muted-foreground)]">api-football synchronization engine</p>
         </div>
         <div className="flex flex-wrap gap-4">
           <button 
             onClick={deleteAllLogos}
             disabled={isDeleting}
-            className="h-16 px-8 bg-zinc-100 text-zinc-500 rounded-[32px] font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-red-50 hover:text-red-600 transition-all disabled:opacity-50"
+            className="h-16 px-8 bg-[var(--muted)] text-zinc-500 rounded-[32px] font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-red-50 hover:text-red-600 transition-all disabled:opacity-50"
           >
             {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             delete all logos
@@ -193,7 +193,7 @@ export default function AdminLogoManager() {
           <button 
             onClick={() => saveAllLogos(true)}
             disabled={isSaving || isDeleting}
-            className="h-16 px-8 bg-zinc-100 text-zinc-500 rounded-[32px] font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-amber-50 hover:text-amber-600 transition-all disabled:opacity-50"
+            className="h-16 px-8 bg-[var(--muted)] text-zinc-500 rounded-[32px] font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-amber-50 hover:text-amber-600 transition-all disabled:opacity-50"
           >
             <Shield className="w-4 h-4" />
             repair & sync
@@ -238,11 +238,11 @@ export default function AdminLogoManager() {
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <Globe className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-black lowercase tracking-tight">Active Leagues</h2>
+            <h2 className="text-xl font-black lowercase tracking-tight text-[var(--foreground)]">Active Leagues</h2>
             <span className="ml-auto text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{leagues.length} found</span>
           </div>
           
-          <div className="bg-white border border-zinc-100 rounded-[40px] shadow-sm overflow-hidden min-h-[400px]">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[40px] shadow-sm overflow-hidden min-h-[400px]">
             {isLoadingLeagues ? (
               <div className="h-96 flex flex-col items-center justify-center gap-4">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -265,10 +265,10 @@ export default function AdminLogoManager() {
                       "p-4 rounded-3xl border transition-all cursor-pointer flex flex-col items-center text-center gap-3",
                       selectedLeague === l.league.id 
                         ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" 
-                        : "bg-zinc-50/50 border-zinc-100 hover:border-zinc-300"
+                        : "bg-[var(--background)]/50 border-[var(--border)] hover:border-zinc-300"
                     )}
                   >
-                    <div className="w-16 h-16 bg-white rounded-2xl p-2 border border-zinc-100 shadow-sm flex items-center justify-center">
+                    <div className="w-16 h-16 bg-[var(--card)] rounded-2xl p-2 border border-[var(--border)] shadow-sm flex items-center justify-center">
                       <img 
                         src={l.league.logo} 
                         alt={l.league.name} 
@@ -278,7 +278,7 @@ export default function AdminLogoManager() {
                       />
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black italic lowercase leading-tight">{l.league.name}</p>
+                      <p className="text-xs font-black italic lowercase leading-tight text-[var(--foreground)]">{l.league.name}</p>
                       <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{l.country.name}</p>
                     </div>
                   </motion.div>
@@ -292,11 +292,11 @@ export default function AdminLogoManager() {
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-black lowercase tracking-tight">League Teams</h2>
+            <h2 className="text-xl font-black lowercase tracking-tight text-[var(--foreground)]">League Teams</h2>
             <span className="ml-auto text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{teams.length} mapped</span>
           </div>
           
-          <div className="bg-white border border-zinc-100 rounded-[40px] shadow-sm overflow-hidden min-h-[400px]">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[40px] shadow-sm overflow-hidden min-h-[400px]">
             {isLoadingTeams ? (
               <div className="h-96 flex flex-col items-center justify-center gap-4">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -314,9 +314,9 @@ export default function AdminLogoManager() {
                     key={t.team.id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 rounded-3xl border border-zinc-100 bg-zinc-50/50 flex flex-col items-center text-center gap-3"
+                    className="p-4 rounded-3xl border border-[var(--border)] bg-[var(--background)]/50 flex flex-col items-center text-center gap-3"
                   >
-                    <div className="w-16 h-16 bg-white rounded-2xl p-2 border border-zinc-100 shadow-sm flex items-center justify-center">
+                    <div className="w-16 h-16 bg-[var(--card)] rounded-2xl p-2 border border-[var(--border)] shadow-sm flex items-center justify-center">
                       <img 
                         src={t.team.logo} 
                         alt={t.team.name} 
@@ -325,7 +325,7 @@ export default function AdminLogoManager() {
                       />
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black italic lowercase leading-tight">{t.team.name}</p>
+                      <p className="text-xs font-black italic lowercase leading-tight text-[var(--foreground)]">{t.team.name}</p>
                       <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{t.team.country}</p>
                     </div>
                   </motion.div>
