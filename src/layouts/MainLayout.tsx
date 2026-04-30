@@ -49,7 +49,7 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
         try {
           await navigator.share({ 
             title: 'Lucky Tips', 
-            text: 'Get the best expert betting tips and analysis with Lucky Tips!',
+            text: 'Get the best expert betting tips and analysis with Lucky Tip$!',
             url: window.location.origin 
           });
         } catch (error) {
@@ -84,7 +84,7 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
           >
             lucky
           </span>
-          <span className="text-[var(--foreground)]">tips</span>
+          <span className="text-[var(--foreground)]">tip$</span>
           <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(0,191,166,0.5)]" />
         </h1>
         <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
 
                 <div className="absolute bottom-4 left-6 right-6 z-10">
                   <h2 className="text-white text-xl font-black italic lowercase tracking-tight leading-none mb-1">
-                    lucky tips menu
+                    lucky tip$ menu
                   </h2>
                   <div className="flex items-center gap-2">
                     <div className="h-[2px] w-8 bg-primary rounded-full" />
@@ -272,7 +272,7 @@ export default function MainLayout({ onLogout }: { onLogout: () => void }) {
                 <div className="flex items-center justify-center gap-2 mt-6">
                    <div className="w-4 h-4 rounded-full bg-premium-gradient animate-pulse shadow-[0_0_10px_rgba(0,191,166,0.5)]" />
                    <p className="text-[9px] text-[var(--muted-foreground)] font-black uppercase tracking-[0.2em] lowercase opacity-50">
-                      Lucky Tips v1.3
+                      Lucky Tip$ v1.3
                    </p>
                 </div>
               </div>

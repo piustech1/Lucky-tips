@@ -6,14 +6,16 @@ import { rtdb } from '../lib/firebase';
 import { ref, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 import PredictionCard from '../components/PredictionCard';
 import { CATEGORIES } from '../constants';
-import { AlertTriangle, MessageSquare, Loader2, Trophy } from 'lucide-react';
+import { AlertTriangle, MessageSquare, Loader2, Trophy, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '../lib/utils';
 
 export default function Home() {
   const navigate = useNavigate();
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWarning, setShowWarning] = useState(false);
+  const [activeTab, setActiveTab] = useState<'today' | 'previous'>('today');
 
   useEffect(() => {
     // Check if user has seen the warning in this session
@@ -33,7 +35,7 @@ export default function Home() {
 
   useEffect(() => {
     const predictionsRef = ref(rtdb, 'predictions');
-    const q = query(predictionsRef, orderByChild('createdAt'), limitToLast(30));
+    const q = query(predictionsRef, orderByChild('createdAt'), limitToLast(50));
     
     const unsubscribe = onValue(q, (snapshot) => {
       const data = snapshot.val();
@@ -42,7 +44,14 @@ export default function Home() {
           id,
           ...val
         } as Prediction)).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        
         setPredictions(tipsData);
+        
+        // Auto-switch to previous if no today's tips
+        const todayCount = tipsData.filter(p => p.status === 'pending').length;
+        if (todayCount === 0) {
+          setActiveTab('previous');
+        }
       } else {
         setPredictions([]);
       }
@@ -54,6 +63,10 @@ export default function Home() {
 
     return () => unsubscribe();
   }, []);
+
+  const todayTips = predictions.filter(p => p.status === 'pending');
+  const previousTips = predictions.filter(p => p.status !== 'pending');
+  const currentTips = activeTab === 'today' ? todayTips : previousTips;
 
   return (
     <div className="space-y-8 pb-10">
@@ -117,75 +130,130 @@ export default function Home() {
       {/* Predictions Section */}
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
-          <div className="space-y-0.5">
-            <h3 className="text-lg font-black text-[var(--foreground)] leading-none lowercase tracking-tight">today's picks</h3>
-            <p className="text-[var(--muted-foreground)] text-[10px] font-black uppercase tracking-[0.2em] lowercase">expert analysis</p>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setActiveTab('today')}
+              className={cn(
+                "group relative transition-all",
+                activeTab === 'today' ? "opacity-100" : "opacity-40"
+              )}
+            >
+              <div className="space-y-0.5 text-left">
+                <h3 className="text-lg font-black text-[var(--foreground)] leading-none lowercase tracking-tight">today's picks</h3>
+                <p className="text-[var(--muted-foreground)] text-[9px] font-black uppercase tracking-[0.2em] lowercase">live & upcoming</p>
+              </div>
+              {activeTab === 'today' && (
+                <motion.div layoutId="tab-underline" className="absolute -bottom-2 left-0 right-0 h-1 bg-primary rounded-full" />
+              )}
+            </button>
+            
+            <button 
+              onClick={() => setActiveTab('previous')}
+              className={cn(
+                "group relative transition-all",
+                activeTab === 'previous' ? "opacity-100" : "opacity-40"
+              )}
+            >
+              <div className="space-y-0.5 text-left">
+                <h3 className="text-lg font-black text-[var(--foreground)] leading-none lowercase tracking-tight">previous tips</h3>
+                <p className="text-[var(--muted-foreground)] text-[9px] font-black uppercase tracking-[0.2em] lowercase">historical logs</p>
+              </div>
+              {activeTab === 'previous' && (
+                <motion.div layoutId="tab-underline" className="absolute -bottom-2 left-0 right-0 h-1 bg-primary rounded-full" />
+              )}
+            </button>
           </div>
-          <div className="p-2 bg-[var(--muted)]/50 rounded-xl">
-             <div className="w-2 h-2 bg-win rounded-full animate-pulse shadow-[0_0_8px_rgba(0,200,83,0.5)]" />
+          
+          <div className="flex items-center gap-2">
+            {activeTab === 'today' && (
+              <div className="p-2 bg-[var(--muted)]/50 rounded-xl">
+                 <div className="w-2 h-2 bg-win rounded-full animate-pulse shadow-[0_0_8px_rgba(0,200,83,0.5)]" />
+              </div>
+            )}
+            {activeTab === 'previous' && (
+              <div className="p-2 bg-[var(--muted)]/50 rounded-xl">
+                 <Trophy className="w-3 h-3 text-secondary" />
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 pt-2">
           {loading ? (
              <div className="flex flex-col items-center justify-center py-20 gap-3">
                <Loader2 className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                <p className="text-zinc-400 font-bold text-[10px] uppercase tracking-[0.2em] lowercase">fetching latest tips...</p>
              </div>
-          ) : predictions.length > 0 ? (
-            predictions.map((prediction: Prediction, index: number) => (
+          ) : currentTips.length > 0 ? (
+            currentTips.map((prediction: Prediction, index: number) => (
               <PredictionCard key={prediction.id} prediction={prediction} index={index} />
             ))
+          ) : activeTab === 'today' ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="py-16 text-center space-y-4 px-8 border-2 border-dashed border-[var(--border)] rounded-[32px]"
+            >
+              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-black lowercase tracking-tight">Analysing Markets...</h4>
+                <p className="text-[10px] text-[var(--muted-foreground)] font-medium leading-relaxed">
+                  Our professional analysts are still scanning global markets for high-probability signals. Please check back shortly for today's elite picks.
+                </p>
+              </div>
+            </motion.div>
           ) : (
             <div className="py-20 text-center space-y-3">
               <Trophy className="w-12 h-12 text-zinc-200 mx-auto" />
-              <p className="text-zinc-400 font-black text-[10px] uppercase tracking-widest lowercase">no matches active right now</p>
+              <p className="text-zinc-400 font-black text-[10px] uppercase tracking-widest lowercase">no historical logs available yet</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Responsible Gambling Modal */}
+      {/* Responsible Gambling Modal - Redesigned */}
       <AnimatePresence>
         {showWarning && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-24">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
               onClick={closeWarning}
             />
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-[320px] bg-[var(--card)] border border-[var(--border)] rounded-[40px] p-8 shadow-2xl space-y-6"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="relative w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xl flex items-center gap-4"
             >
-              <div className="w-16 h-16 bg-amber-500/10 rounded-[24px] flex items-center justify-center mx-auto">
-                <AlertTriangle className="w-8 h-8 text-amber-500" />
+              <div className="shrink-0 w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
               </div>
 
-              <div className="space-y-2 text-center">
-                <h3 className="text-xl font-black italic lowercase tracking-tight">Play Responsibly</h3>
-                <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest lowercase leading-relaxed">
-                  Betting might be harmful to your financial health and mental well-being. Always gamble with money you can afford to lose.
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xs font-bold text-[var(--foreground)] leading-tight">Notice: Game Responsibly</h3>
+                <p className="text-[10px] text-[var(--muted-foreground)] leading-tight truncate">
+                  Betting involves risk. Join our community for expert guidance and safe analysis.
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => window.open('https://chat.whatsapp.com/GgS9vG7y9W53L6I0V5nO5L', '_blank')}
-                  className="w-full py-4 rounded-2xl bg-[#25D366] text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-[#25D366]/20 hover:scale-[1.02] active:scale-95 transition-all"
+                  className="px-3 h-8 rounded-lg bg-[#25D366] text-white font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 transition-all"
                 >
-                  <MessageSquare className="w-4 h-4" />
-                  Join community
+                  <MessageSquare className="w-3 h-3" />
+                  Join
                 </button>
                 <button 
                   onClick={closeWarning}
-                  className="w-full py-4 rounded-2xl bg-[var(--muted)]/50 text-[var(--muted-foreground)] font-black text-[10px] uppercase tracking-widest hover:bg-[var(--muted)] transition-all"
+                  className="h-8 w-8 rounded-lg bg-[var(--muted)]/50 text-[var(--muted-foreground)] flex items-center justify-center hover:bg-[var(--muted)] transition-all"
                 >
-                  I Understand
+                  <XCircle className="w-4 h-4" />
                 </button>
               </div>
             </motion.div>
