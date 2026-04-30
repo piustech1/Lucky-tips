@@ -23,6 +23,9 @@ interface UserContextType {
   loading: boolean;
   isVip: boolean;
   isAdmin: boolean;
+  phoneNumber?: string;
+  setPhoneNumber: (phone: string) => void;
+  setIsVip: (value: boolean) => void;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
 
@@ -32,6 +35,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [localPhoneNumber, setLocalPhoneNumber] = useState('');
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -80,6 +84,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             }
 
             setProfile(profileData);
+            if (profileData.phoneNumber) {
+              setLocalPhoneNumber(profileData.phoneNumber);
+            }
           } else {
             console.log('No RTDB profile found for user');
           }
@@ -115,6 +122,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     loading,
     isVip: profile?.subscriptionTier === 'vip',
     isAdmin: profile?.isAdmin || false,
+    phoneNumber: localPhoneNumber,
+    setPhoneNumber: setLocalPhoneNumber,
+    setIsVip: (value: boolean) => {
+      if (user) {
+        updateProfile({ subscriptionTier: value ? 'vip' : 'free' });
+      }
+    },
     updateProfile
   };
 
