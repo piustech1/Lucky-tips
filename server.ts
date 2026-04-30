@@ -34,7 +34,7 @@ async function startServer() {
 
   // MarzPay Collection Route
   app.post("/api/collect-payment", async (req, res) => {
-    const { amount, phoneNumber, provider, packageName, userId } = req.body;
+    const { amount, phoneNumber, packageName, userId } = req.body;
     
     if (!amount || !phoneNumber) {
       return res.status(400).json({ error: "Amount and phone number are required" });
@@ -48,52 +48,74 @@ async function startServer() {
       return res.status(500).json({ error: "Payment provider not configured" });
     }
 
-    // Format phone number (+256 format)
-    let formattedPhone = phoneNumber.replace(/\s+/g, '');
+    // Format phone number STRICTLY to: +2567XXXXXXXX
+    let formattedPhone = phoneNumber.replace(/\s+/g, '').replace(/\D/g, '');
     if (formattedPhone.startsWith('0')) {
-      formattedPhone = '+256' + formattedPhone.substring(1);
-    } else if (formattedPhone.startsWith('256')) {
-      formattedPhone = '+' + formattedPhone;
-    } else if (!formattedPhone.startsWith('+')) {
-      formattedPhone = '+256' + formattedPhone;
+      formattedPhone = '256' + formattedPhone.substring(1);
+    } else if (!formattedPhone.startsWith('256')) {
+      formattedPhone = '256' + formattedPhone;
     }
+    formattedPhone = '+' + formattedPhone;
 
     const reference = uuidv4();
     const authHeader = `Basic ${Buffer.from(`${MARZ_KEY}:${MARZ_SECRET}`).toString('base64')}`;
+    
+    // Dynamic baseUrl detection
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host || 'lucky-tips.vercel.app';
+    const baseUrl = `${protocol}://${host}`;
+    const callback_url = `${baseUrl}/api/webhook`;
+
+    const requestPayload = {
+      amount: parseInt(amount),
+      phone_number: formattedPhone,
+      country: "UG",
+      reference: reference,
+      description: packageName || 'Premium Subscription',
+      callback_url: callback_url
+    };
 
     try {
-      console.log(`[MarzPay] Initiating collection: ref=${reference}, phone=${formattedPhone}, provider=${provider}, amount=${amount}`);
+      console.log(`[MarzPay] Request Payload:`, JSON.stringify(requestPayload, null, 2));
 
       const response = await fetch("https://wallet.wearemarz.com/api/v1/collect-money", {
         method: "POST",
         headers: {
           "Authorization": authHeader,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Accept": "application/json"
         },
-        body: JSON.stringify({
-          amount: parseInt(amount),
-          phone_number: formattedPhone,
-          country: "UG",
-          reference: reference,
-          description: `Subscription: ${packageName || 'Premium'}`,
-          callback_url: `https://${req.get('host')}/api/webhook`
-        })
+        body: JSON.stringify(requestPayload)
       });
 
-      const data = await response.json();
+      console.log(`[MarzPay] Response Status: ${response.status}`);
+
+      let data;
+      const rawText = await response.text();
+      console.log(`[MarzPay] Raw Response:`, rawText);
+
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        console.error("[MarzPay] JSON Parse Error. Raw text follows:", rawText);
+        return res.status(500).json({ 
+          error: "Invalid JSON from MarzPay", 
+          raw: rawText 
+        });
+      }
 
       if (!response.ok) {
-        console.error("[MarzPay] Collection Error:", data);
+        console.error("[MarzPay] Provider Error Case:", data);
         return res.status(response.status).json(data);
       }
 
       res.json({ 
         success: true, 
         reference, 
-        providerResponse: data 
+        data 
       });
     } catch (error) {
-      console.error("[MarzPay] Critical Error:", error);
+      console.error("[MarzPay] Critical Fetch Error:", error);
       res.status(500).json({ error: "Internal payment processing error" });
     }
   });
@@ -101,35 +123,44 @@ async function startServer() {
   // MarzPay Webhook Route
   app.post("/api/webhook", async (req, res) => {
     const payload = req.body;
-    console.log("[MarzPay] Webhook Received:", JSON.stringify(payload, null, 2));
+    console.log("[MarzPay Webhook] Payload Received:", JSON.stringify(payload, null, 2));
 
     try {
-      // Validate Payload Structure
       const eventType = payload.event_type;
       const transaction = payload.transaction;
 
       if (!transaction || !transaction.reference) {
-        console.warn("[MarzPay Webhook] Invalid payload structure");
+        console.warn("[MarzPay Webhook] Missing transaction.reference");
         return res.status(400).send("Invalid payload");
       }
 
-      const { reference, status } = transaction;
+      const { reference } = transaction;
       const paymentRef = db.ref(`payments/${reference}`);
       
-      // Update the payment record
+      // Determine final status mapping
+      let finalStatus = 'pending';
+      if (eventType === 'collection.completed') {
+        finalStatus = 'completed';
+      } else if (eventType === 'collection.failed') {
+        finalStatus = 'failed';
+      } else if (eventType === 'collection.cancelled') {
+        finalStatus = 'cancelled';
+      }
+
+      // Update Firebase RTDB
       await paymentRef.update({
-        status: status, // completed, failed, etc.
+        status: finalStatus,
         updatedAt: admin.database.ServerValue.TIMESTAMP,
-        rawWebhookPayload: payload
+        webhookPayload: payload
       });
 
-      // If payment is completed, grant VIP status to the user
-      if (status === 'completed' || eventType === 'collection.completed') {
+      // Grant VIP on success
+      if (finalStatus === 'completed') {
         const snapshot = await paymentRef.once('value');
         const paymentData = snapshot.val();
 
         if (paymentData && paymentData.userId && paymentData.userId !== 'anonymous') {
-          console.log(`[MarzPay Webhook] Granting VIP to user: ${paymentData.userId}`);
+          console.log(`[MarzPay Webhook] Granting VIP Access: ${paymentData.userId}`);
           await db.ref(`users/${paymentData.userId}`).update({
             subscriptionTier: 'vip',
             lastActivated: admin.database.ServerValue.TIMESTAMP
@@ -139,7 +170,7 @@ async function startServer() {
 
       res.status(200).send("OK");
     } catch (error) {
-      console.error("[MarzPay] Webhook Internal Error:", error);
+      console.error("[MarzPay Webhook] Error processing update:", error);
       res.status(500).send("Internal Server Error");
     }
   });

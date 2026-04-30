@@ -35,7 +35,6 @@ export default function Payment() {
         body: JSON.stringify({
           amount: amount,
           phoneNumber: localPhone,
-          provider: provider,
           packageName: pkgName,
           userId: profile?.uid
         })
@@ -59,7 +58,6 @@ export default function Payment() {
         packageId: pkgId,
         packageName: pkgName,
         phoneNumber: localPhone,
-        provider: provider,
         reference: data.reference,
         timestamp: serverTimestamp(),
         status: 'pending',
@@ -69,8 +67,8 @@ export default function Payment() {
       setPhoneNumber(localPhone);
       setLoading(false);
       
-      // Tell user to check phone
-      alert('Payment request sent. Please check your phone to enter your MTN/Airtel PIN.');
+      // Tell user to check phone for PIN prompt
+      alert('Request success! please check your phone now. a mobile money prompt will appear shortly. enter your secret pin to confirm payment.');
       
     } catch (error) {
       console.error('Payment Error:', error);
