@@ -96,8 +96,17 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  const todayTips = predictions.filter(p => p.status === 'pending');
-  const previousTips = predictions.filter(p => p.status !== 'pending');
+  const todayTips = predictions.filter(p => {
+    const isNew = p.status === 'pending';
+    const isWithin24h = p.createdAt ? (Date.now() - p.createdAt) < (24 * 60 * 60 * 1000) : true;
+    return isNew && isWithin24h;
+  });
+
+  const previousTips = predictions.filter(p => {
+    const isNotPending = p.status !== 'pending';
+    const isOlderThan24h = p.createdAt ? (Date.now() - p.createdAt) >= (24 * 60 * 60 * 1000) : false;
+    return isNotPending || isOlderThan24h;
+  });
   const currentTips = activeTab === 'today' ? todayTips : previousTips;
 
   if (loading) {
@@ -144,12 +153,12 @@ export default function Home() {
               key={cat.id}
               whileTap={{ scale: 0.96 }}
               onClick={() => navigate(`/sections?type=${cat.id}`)}
-              className="flex-none w-48 h-12 snap-start flex items-center gap-3 bg-white border border-[#E9ECEF] px-4 rounded-2xl shadow-sm hover:shadow-md transition-all group"
+              className="flex-none w-48 h-12 snap-start flex items-center gap-3 bg-black dark:bg-white border border-zinc-800 dark:border-zinc-200 px-4 rounded-2xl shadow-sm hover:shadow-md transition-all group"
             >
               <div className="shrink-0 p-1.5 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary group-hover:text-white">
                 <cat.icon className="w-4 h-4 text-primary group-hover:text-white" />
               </div>
-              <span className="text-[11px] font-black text-[var(--foreground)] leading-tight lowercase truncate">
+              <span className="text-[11px] font-black text-white dark:text-zinc-900 leading-tight lowercase truncate">
                 {cat.label}
               </span>
             </motion.button>

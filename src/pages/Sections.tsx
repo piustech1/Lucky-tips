@@ -17,6 +17,7 @@ export default function Sections() {
   const activeCategory = searchParams.get('type');
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'new' | 'previous'>('new');
 
   useEffect(() => {
     if (!activeCategory) {
@@ -27,7 +28,7 @@ export default function Sections() {
 
     setLoading(true);
     const predictionsRef = ref(rtdb, 'predictions');
-    const q = query(predictionsRef, orderByChild('createdAt'), limitToLast(100));
+    const q = query(predictionsRef, orderByChild('createdAt'), limitToLast(200));
 
     const unsubscribe = onValue(q, (snapshot) => {
       const data = snapshot.val();
@@ -39,7 +40,7 @@ export default function Sections() {
           ...val
         } as Prediction)).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
 
-        // Filter on client side
+        // Filter by category
         if (activeCategory === 'vip') {
           tips = tips.filter(p => p.isVip);
         } else if (activeCategory === 'free') {
@@ -60,6 +61,20 @@ export default function Sections() {
     return () => unsubscribe();
   }, [activeCategory]);
 
+  const newTips = predictions.filter(p => {
+    const isNew = p.status === 'pending';
+    const isWithin24h = p.createdAt ? (Date.now() - p.createdAt) < (24 * 60 * 60 * 1000) : true;
+    return isNew && isWithin24h;
+  });
+
+  const previousTips = predictions.filter(p => {
+    const isNotPending = p.status !== 'pending';
+    const isOlderThan24h = p.createdAt ? (Date.now() - p.createdAt) >= (24 * 60 * 60 * 1000) : false;
+    return isNotPending || isOlderThan24h;
+  });
+
+  const currentTips = activeTab === 'new' ? newTips : previousTips;
+
   const handleBack = () => {
     setSearchParams({});
   };
@@ -71,6 +86,7 @@ export default function Sections() {
       return;
     }
     setSearchParams({ type: catId });
+    setActiveTab('new');
   };
 
   const selectedCategoryData = CATEGORIES.find(c => c.id === activeCategory);
@@ -88,7 +104,7 @@ export default function Sections() {
           >
             <section className="space-y-1 text-center px-4">
               <h2 className="text-xl font-black tracking-tight text-primary italic uppercase tracking-widest leading-none lowercase">tip categories</h2>
-              <p className="text-[var(--muted-foreground)] text-[10px] font-bold uppercase tracking-[0.2em] lowercase">select market to view tips</p>
+              <p className="text-zinc-600 dark:text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] lowercase">select market to view tips</p>
             </section>
 
             <div className="grid grid-cols-1 gap-3 px-2">
@@ -103,7 +119,7 @@ export default function Sections() {
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => handleCategoryClick(cat.id)}
-                    className="relative bg-white dark:bg-[#121212] border border-zinc-100 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/40 transition-all group overflow-hidden h-20"
+                    className="relative bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-primary/40 transition-all group overflow-hidden h-20"
                   >
                     <div className="flex items-center gap-4 relative z-10">
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -112,7 +128,7 @@ export default function Sections() {
                       
                       <div className="text-left space-y-0.5">
                         <h3 className="text-zinc-900 dark:text-white font-black text-sm tracking-tight lowercase">{cat.label}</h3>
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest lowercase">
+                        <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest lowercase">
                           {isPremium ? 'premium analytics' : 'open to all'}
                         </p>
                       </div>
@@ -161,24 +177,52 @@ export default function Sections() {
               </button>
             </div>
 
+            {/* Category Tabs */}
+            <div className="flex items-center gap-4 px-2">
+              <button 
+                onClick={() => setActiveTab('new')}
+                className={cn(
+                  "px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all",
+                  activeTab === 'new' 
+                    ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                    : "bg-white dark:bg-zinc-900 text-zinc-400 border border-zinc-100 dark:border-zinc-800"
+                )}
+              >
+                new tips
+              </button>
+              <button 
+                onClick={() => setActiveTab('previous')}
+                className={cn(
+                  "px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all",
+                  activeTab === 'previous' 
+                    ? "bg-secondary text-white shadow-lg shadow-secondary/20" 
+                    : "bg-white dark:bg-zinc-900 text-zinc-400 border border-zinc-100 dark:border-zinc-800"
+                )}
+              >
+                previous
+              </button>
+            </div>
+
             <div className="space-y-3 mt-4">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-32 bg-[var(--card)] rounded-2xl animate-pulse" />
+                  <div key={i} className="h-32 bg-white dark:bg-zinc-900 rounded-2xl animate-pulse" />
                 ))
-              ) : predictions.length > 0 ? (
-                predictions.map((prediction, index) => (
+              ) : currentTips.length > 0 ? (
+                currentTips.map((prediction, index) => (
                   <PredictionCard key={prediction.id} prediction={prediction} index={index} />
                 ))
               ) : (
-                <div className="text-center py-20 px-10 space-y-4 bg-[var(--card)] rounded-[40px] border border-[var(--border)]">
+                <div className="text-center py-20 px-10 space-y-4 bg-white dark:bg-zinc-900 rounded-[40px] border border-zinc-100 dark:border-zinc-800">
                   <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                     <Target className="w-10 h-10 text-primary opacity-50" />
                   </div>
                   <div>
-                    <h3 className="font-black text-lg tracking-tight uppercase text-white lowercase">no tips available</h3>
-                    <p className="text-[var(--muted-foreground)] text-xs font-medium max-w-[200px] mx-auto leading-relaxed lowercase">
-                      our experts are currently analyzing more matches for the <b>{selectedCategoryData?.label}</b> market.
+                    <h3 className="font-black text-lg tracking-tight uppercase text-zinc-900 dark:text-white lowercase">no tips available</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-xs font-medium max-w-[200px] mx-auto leading-relaxed lowercase">
+                      {activeTab === 'new' 
+                        ? `our experts are currently analyzing more matches for the ${selectedCategoryData?.label} market.` 
+                        : "no historic data found for this category yet."}
                     </p>
                   </div>
                   <button 

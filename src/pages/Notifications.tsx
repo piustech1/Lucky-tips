@@ -142,8 +142,8 @@ export default function Notifications() {
                 className={cn(
                   "group relative p-3 rounded-2xl border transition-all duration-300",
                   !item.isRead 
-                    ? "bg-white border-zinc-200 shadow-sm hover:shadow-md cursor-pointer" 
-                    : "bg-zinc-50/50 border-zinc-100 opacity-60"
+                    ? "bg-zinc-900 dark:bg-white border-zinc-200 shadow-sm hover:shadow-md cursor-pointer" 
+                    : "bg-zinc-800 dark:bg-zinc-50 border-zinc-100 opacity-60"
                 )}
               >
                 <div className="flex gap-4 items-center">
@@ -153,14 +153,14 @@ export default function Notifications() {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className={cn("font-black text-[13px] leading-tight lowercase truncate", !item.isRead ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]")}>
+                      <h3 className={cn("font-black text-[13px] leading-tight lowercase truncate", !item.isRead ? "text-white dark:text-zinc-900" : "text-zinc-400 dark:text-zinc-500")}>
                         {item.title}
                       </h3>
                       <span className="text-[8px] font-bold text-zinc-400 tabular-nums lowercase shrink-0">
                         {item.createdAt ? formatDistanceToNow(item.createdAt, { addSuffix: true }) : 'just now'}
                       </span>
                     </div>
-                    <p className="text-zinc-500 text-[11px] leading-tight lowercase tracking-tight line-clamp-1 mt-0.5 opacity-80">
+                    <p className="text-zinc-400 dark:text-zinc-500 text-[11px] leading-tight lowercase tracking-tight line-clamp-1 mt-0.5 opacity-80">
                       {item.message}
                     </p>
                   </div>
