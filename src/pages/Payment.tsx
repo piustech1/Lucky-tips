@@ -35,15 +35,24 @@ export default function Payment() {
         body: JSON.stringify({
           amount: amount,
           phoneNumber: localPhone,
+          provider: provider,
           packageName: pkgName,
           userId: profile?.uid
         })
       });
 
-      const data = await response.json();
+      // SAFE JSON PARSING
+      const rawText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        console.error('[Frontend] Invalid JSON response from server:', rawText);
+        throw new Error('Server returned an invalid response. Please try again later.');
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to initiate payment');
+        throw new Error(data.error || data.details?.error || 'Failed to initiate payment');
       }
 
       setTransactionRef(data.reference);
@@ -58,6 +67,7 @@ export default function Payment() {
         packageId: pkgId,
         packageName: pkgName,
         phoneNumber: localPhone,
+        provider: provider,
         reference: data.reference,
         timestamp: serverTimestamp(),
         status: 'pending',
@@ -83,7 +93,16 @@ export default function Payment() {
 
     try {
       const response = await fetch(`/api/check-status/${transactionRef}`);
-      const data = await response.json();
+      
+      // SAFE JSON PARSING
+      const rawText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        console.error('[Frontend] Invalid JSON from status check:', rawText);
+        throw new Error('Could not verify status. Please wait a moment and try again.');
+      }
       
       console.log('Status check result:', data);
 
@@ -111,6 +130,7 @@ export default function Payment() {
       }
     } catch (error) {
       console.error('Status Check Error:', error);
+      alert(error instanceof Error ? error.message : 'Error checking payment status.');
     } finally {
       setCheckingStatus(false);
     }

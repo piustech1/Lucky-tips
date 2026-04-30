@@ -32,9 +32,15 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Test Route for Vercel diagnostic
+  app.get("/api/test", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // MarzPay Collection Route
   app.post("/api/collect-payment", async (req, res) => {
-    const { amount, phoneNumber, packageName, userId } = req.body;
+    console.log("[Backend] Incoming request to /api/collect-payment:", req.body);
+    const { amount, phoneNumber, provider, packageName, userId } = req.body;
     
     if (!amount || !phoneNumber) {
       return res.status(400).json({ error: "Amount and phone number are required" });
@@ -45,25 +51,30 @@ async function startServer() {
 
     if (!MARZ_KEY || !MARZ_SECRET) {
       console.error("[MarzPay] Missing API Credentials");
-      return res.status(500).json({ error: "Payment provider not configured" });
+      return res.status(500).json({ error: "Payment provider not configured in environment" });
     }
 
-    // Format phone number STRICTLY to: +2567XXXXXXXX
-    let formattedPhone = phoneNumber.replace(/\s+/g, '').replace(/\D/g, '');
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = '256' + formattedPhone.substring(1);
-    } else if (!formattedPhone.startsWith('256')) {
-      formattedPhone = '256' + formattedPhone;
+    // Format phone number STRICTLY to: +256XXXXXXXXX (12 digits including +)
+    // Remove any non-digits
+    let cleanDigits = phoneNumber.replace(/\D/g, '');
+    
+    // If it starts with 07..., transform to 2567...
+    if (cleanDigits.startsWith('0') && cleanDigits.length === 10) {
+      cleanDigits = '256' + cleanDigits.substring(1);
     }
-    formattedPhone = '+' + formattedPhone;
+    // Ensure it has 256 prefix
+    if (!cleanDigits.startsWith('256')) {
+      cleanDigits = '256' + cleanDigits;
+    }
+    const formattedPhone = '+' + cleanDigits;
 
     const reference = uuidv4();
     const authHeader = `Basic ${Buffer.from(`${MARZ_KEY}:${MARZ_SECRET}`).toString('base64')}`;
     
-    // Dynamic baseUrl detection
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    // Dynamic baseUrl detection for callback
     const host = req.headers.host || 'lucky-tips.vercel.app';
-    const baseUrl = `${protocol}://${host}`;
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `${protocol}://${host}`;
     const callback_url = `${baseUrl}/api/webhook`;
 
     const requestPayload = {
@@ -76,7 +87,7 @@ async function startServer() {
     };
 
     try {
-      console.log(`[MarzPay] Request Payload:`, JSON.stringify(requestPayload, null, 2));
+      console.log(`[MarzPay] Outgoing Request Payload:`, JSON.stringify(requestPayload, null, 2));
 
       const response = await fetch("https://wallet.wearemarz.com/api/v1/collect-money", {
         method: "POST",
@@ -90,54 +101,58 @@ async function startServer() {
 
       console.log(`[MarzPay] Response Status: ${response.status}`);
 
-      let data;
       const rawText = await response.text();
       console.log(`[MarzPay] Raw Response:`, rawText);
 
+      let data;
       try {
         data = JSON.parse(rawText);
       } catch (e) {
-        console.error("[MarzPay] JSON Parse Error. Raw text follows:", rawText);
+        console.error("[MarzPay] Invalid JSON from MarzPay API:", rawText);
         return res.status(500).json({ 
-          error: "Invalid JSON from MarzPay", 
+          error: "Invalid JSON response from MarzPay", 
           raw: rawText 
         });
       }
 
       if (!response.ok) {
-        console.error("[MarzPay] Provider Error Case:", data);
-        return res.status(response.status).json(data);
+        console.error("[MarzPay] Request Failed:", data);
+        return res.status(response.status).json({
+          error: "MarzPay request failed",
+          status: response.status,
+          details: data
+        });
       }
 
-      res.json({ 
+      res.status(200).json({ 
         success: true, 
         reference, 
         data 
       });
     } catch (error) {
-      console.error("[MarzPay] Critical Fetch Error:", error);
-      res.status(500).json({ error: "Internal payment processing error" });
+      console.error("[MarzPay] Critical Internal Error:", error);
+      res.status(500).json({ error: "Failed to initiate payment due to a server-side error" });
     }
   });
 
   // MarzPay Webhook Route
   app.post("/api/webhook", async (req, res) => {
+    console.log("[MarzPay Webhook] Received Payload:", JSON.stringify(req.body, null, 2));
     const payload = req.body;
-    console.log("[MarzPay Webhook] Payload Received:", JSON.stringify(payload, null, 2));
 
     try {
       const eventType = payload.event_type;
       const transaction = payload.transaction;
 
       if (!transaction || !transaction.reference) {
-        console.warn("[MarzPay Webhook] Missing transaction.reference");
-        return res.status(400).send("Invalid payload");
+        console.warn("[MarzPay Webhook] Missing transaction.reference in payload");
+        return res.status(400).json({ error: "Invalid payload: missing reference" });
       }
 
       const { reference } = transaction;
       const paymentRef = db.ref(`payments/${reference}`);
       
-      // Determine final status mapping
+      // Map MarzPay events to our status system
       let finalStatus = 'pending';
       if (eventType === 'collection.completed') {
         finalStatus = 'completed';
@@ -146,6 +161,8 @@ async function startServer() {
       } else if (eventType === 'collection.cancelled') {
         finalStatus = 'cancelled';
       }
+
+      console.log(`[MarzPay Webhook] Updating reference ${reference} to ${finalStatus}`);
 
       // Update Firebase RTDB
       await paymentRef.update({
@@ -160,7 +177,7 @@ async function startServer() {
         const paymentData = snapshot.val();
 
         if (paymentData && paymentData.userId && paymentData.userId !== 'anonymous') {
-          console.log(`[MarzPay Webhook] Granting VIP Access: ${paymentData.userId}`);
+          console.log(`[MarzPay Webhook] Activating VIP for user: ${paymentData.userId}`);
           await db.ref(`users/${paymentData.userId}`).update({
             subscriptionTier: 'vip',
             lastActivated: admin.database.ServerValue.TIMESTAMP
@@ -168,10 +185,11 @@ async function startServer() {
         }
       }
 
-      res.status(200).send("OK");
+      return res.status(200).json({ received: true, status: finalStatus });
     } catch (error) {
-      console.error("[MarzPay Webhook] Error processing update:", error);
-      res.status(500).send("Internal Server Error");
+      console.error("[MarzPay Webhook] Processing Error:", error);
+      // Still return 200 to acknowledge receipt of webhook from provider, but log the error locally
+      return res.status(200).json({ error: "Processed with internal error", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
