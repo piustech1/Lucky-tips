@@ -7,6 +7,8 @@ import { ref, serverTimestamp, set } from 'firebase/database';
 import { rtdb } from '../lib/firebase';
 import { cn } from '../lib/utils';
 
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw5sB1eQX8JSYC4pJJ5Voyn1RAtj4jDVyd8_Y13YSsnmn3v_zwCai3p-8Vqd3-cjxwh/exec';
+
 export default function Payment() {
   const [searchParams] = useSearchParams();
   const pkgName = searchParams.get('name') || 'Weekly Pack';
@@ -28,34 +30,36 @@ export default function Payment() {
     setLoading(true);
     
     try {
-      // 1. Call Backend to initiate MarzPay collection
-      console.log("=== INITIATING PAYMENT ===");
-      const response = await fetch('/api/collect-payment', {
+      // 1. Call Google Apps Script to initiate MarzPay collection
+      console.log("=== INITIATING PAYMENT via GAS POST ===");
+      
+      const payload = {
+        path: 'collect',
+        amount: amount,
+        phone: localPhone,
+        packageName: pkgName,
+        userId: profile?.uid || 'anonymous'
+      };
+
+      const response = await fetch(GAS_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: amount,
-          phoneNumber: localPhone,
-          provider: provider,
-          packageName: pkgName,
-          userId: profile?.uid
-        })
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
       });
 
-      // SAFE JSON PARSING
       const rawText = await response.text();
       let data;
       try {
         data = JSON.parse(rawText);
       } catch (e) {
-        console.error('[Frontend] Invalid JSON response from server:', rawText);
+        console.error('[Frontend] Invalid JSON response from GAS:', rawText);
         throw new Error('Server returned an invalid response. Please try again later.');
       }
 
-      console.log("Server response:", data);
+      console.log("GAS response:", data);
 
-      if (!response.ok || data.success === false) {
-        throw new Error(data.message || 'Failed to initiate payment');
+      if (!data.success) {
+        throw new Error(data.message || data.error || 'Failed to initiate payment');
       }
 
       const reference = data.reference;
@@ -96,7 +100,16 @@ export default function Payment() {
     setCheckingStatus(true);
 
     try {
-      const response = await fetch(`/api/check-status/${transactionRef}`);
+      const payload = {
+        path: 'status',
+        reference: transactionRef
+      };
+
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
       
       // SAFE JSON PARSING
       const rawText = await response.text();
@@ -104,14 +117,14 @@ export default function Payment() {
       try {
         data = JSON.parse(rawText);
       } catch (e) {
-        console.error('[Frontend] Invalid JSON from status check:', rawText);
+        console.error('[Frontend] Invalid JSON from GAS status check:', rawText);
         throw new Error('Could not verify status. Please wait a moment and try again.');
       }
       
-      console.log('Status check result:', data);
+      console.log('Status check result from GAS:', data);
 
-      // Depending on MarzPay response format (usually has status in transaction or top level)
-      const status = data.transaction?.status || data.status;
+      // Map GAS status to our app logic
+      const status = data.status || (data.data?.transaction?.status);
 
       if (status === 'completed' || status === 'successful') {
         // Update Firebase status to completed
