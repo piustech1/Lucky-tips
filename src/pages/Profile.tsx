@@ -74,7 +74,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-8 pb-10 relative">
+    <div className="space-y-6 pb-10 relative">
       {/* Background Hero Image */}
       <div className="absolute -top-20 -left-4 -right-4 h-[50vh] overflow-hidden pointer-events-none z-0">
         <img 
@@ -85,12 +85,12 @@ export default function Profile() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--background)]/40 to-[var(--background)]" />
       </div>
 
-      <div className="flex justify-center pt-8 relative z-10">
-         <img src={LOGO_URL} alt="Lucky Tip$ Logo" className="w-16 h-16 object-contain drop-shadow-xl" />
+      <div className="flex justify-center pt-4 relative z-10">
+         <img src={LOGO_URL} alt="Lucky Tip$ Logo" className="w-14 h-14 object-contain drop-shadow-xl" />
       </div>
 
       {/* Profile Header */}
-      <section className="relative pt-4 pb-6 flex flex-col items-center z-10">
+      <section className="relative pt-2 pb-4 flex flex-col items-center z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/10 blur-[80px] rounded-full pointer-events-none" />
         
         <motion.div 

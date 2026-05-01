@@ -421,9 +421,9 @@ export default function AdminTips() {
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="relative w-full max-w-4xl bg-white rounded-xl shadow-2xl border border-zinc-200 flex flex-col max-h-[85vh] overflow-hidden"
+              className="relative w-full max-w-4xl bg-white dark:bg-zinc-100 rounded-xl shadow-2xl border border-zinc-200 flex flex-col max-h-[85vh] overflow-hidden text-zinc-900"
             >
-              <div className="p-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+              <div className="p-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center shadow-lg">
                        <Plus className="w-4 h-4 text-primary" />
@@ -578,7 +578,7 @@ export default function AdminTips() {
                initial={{ scale: 0.9, opacity: 0 }}
                animate={{ scale: 1, opacity: 1 }}
                exit={{ scale: 0.9, opacity: 0 }}
-               className="relative w-full max-w-md bg-white rounded-[48px] shadow-2xl p-10 space-y-8"
+               className="relative w-full max-w-md bg-white rounded-[48px] shadow-2xl p-10 space-y-8 text-zinc-900"
              >
                 <div className="text-center space-y-2">
                    <div className="w-20 h-20 bg-primary/10 rounded-[32px] mx-auto flex items-center justify-center border border-primary/20">
@@ -650,7 +650,7 @@ function SearchableDropdown({ label, items, value, logo, onSelect }: { label: st
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-zinc-100 rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[300px]"
+              className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-zinc-100 rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[300px] text-zinc-900"
             >
               <div className="p-4 border-b border-zinc-50">
                 <div className="relative">

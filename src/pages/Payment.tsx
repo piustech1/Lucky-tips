@@ -19,7 +19,7 @@ export default function Payment() {
   const { setPhoneNumber, setIsVip, phoneNumber, profile } = useUser();
   
   const [step, setStep] = useState<PaymentStep>('idle');
-  const [localPhone, setLocalPhone] = useState(phoneNumber || '');
+  const [localPhone, setLocalPhone] = useState('');
   const [provider, setProvider] = useState<'mtn' | 'airtel'>('mtn');
   const [loading, setLoading] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export default function Payment() {
   const processingMessages = [
     'Waiting for your PIN authorization...',
     'Synchronizing with Mobile Money network...',
-    'Securely verifying transaction via MarzPay...',
+    'Securely verifying transaction...',
     'Establishing encrypted handshake...',
     'Awaiting final network clearance...'
   ];
@@ -143,7 +143,7 @@ export default function Payment() {
     setErrorMessage(null);
     
     try {
-      showStatusToast('Syncing with MarzPay Gateway...', 'info');
+      showStatusToast('Syncing with payment gateway...', 'info');
       
       const payload = {
         path: 'collect',
@@ -290,16 +290,17 @@ export default function Payment() {
 
       <AnimatePresence mode="wait">
         {step === 'success' ? (
-          <motion.div 
-            key="success"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
-          >
-            <div className="w-24 h-24 bg-green-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-green-500/20 rotate-3 animate-pulse">
-              <CheckCircle2 className="w-12 h-12 text-white" />
-            </div>
+            <motion.div 
+              key="success"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur-sm"
+            >
+              <motion.div className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8 w-full max-w-sm">
+                <div className="w-20 h-20 bg-green-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-green-500/20 rotate-3 animate-pulse">
+                  <CheckCircle2 className="w-10 h-10 text-white" />
+                </div>
             <div className="space-y-2">
               <h2 className="text-3xl font-black italic tracking-tighter dark:text-white text-zinc-900 leading-none">Authentication Success</h2>
               <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
@@ -326,6 +327,7 @@ export default function Payment() {
                <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                <p className="text-[10px] font-black text-zinc-400 lowercase tracking-widest">Entering VIP Vault...</p>
             </div>
+           </motion.div>
           </motion.div>
         ) : step === 'failed' ? (
           <motion.div 
@@ -333,77 +335,81 @@ export default function Payment() {
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur-sm"
           >
-            <div className="w-24 h-24 bg-red-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-red-500/20 -rotate-3">
-              <XCircle className="w-12 h-12 text-white" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black italic tracking-tighter dark:text-white text-zinc-900 leading-none">Payment Aborted</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
-                {errorMessage || 'The transaction could not be completed. Please verify your balance and retry the protocol.'}
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 pt-4">
-              <button 
-                onClick={() => setStep('idle')}
-                className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl"
-              >
-                Retry Request
-              </button>
-              <button 
-                onClick={() => navigate('/subscription')}
-                className="w-full py-5 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px]"
-              >
-                Return to Plans
-              </button>
-            </div>
+            <motion.div className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8 w-full max-w-sm">
+              <div className="w-20 h-20 bg-red-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-red-500/20 -rotate-3">
+                <XCircle className="w-10 h-10 text-white" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black italic tracking-tighter dark:text-white text-zinc-900 leading-none">Payment Aborted</h2>
+                <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
+                  {errorMessage || 'The transaction could not be completed. Please verify your balance and retry the protocol.'}
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 pt-4">
+                <button 
+                  onClick={() => setStep('idle')}
+                  className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl"
+                >
+                  Retry Request
+                </button>
+                <button 
+                  onClick={() => navigate('/subscription')}
+                  className="w-full py-5 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px]"
+                >
+                  Return to Plans
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         ) : step === 'processing' ? (
           <motion.div 
             key="processing"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur-sm"
           >
-            <div className="w-24 h-24 bg-primary/10 rounded-[32px] flex items-center justify-center mx-auto relative">
-               <div className="absolute inset-0 border-4 border-primary rounded-[32px] animate-ping opacity-20" />
-               <RefreshCw className="w-10 h-10 text-primary animate-spin" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black italic tracking-tighter dark:text-white text-zinc-900">Validating Payment</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest leading-relaxed px-4 animate-pulse">
-                {processingMessages[processingMessageIdx]}
-              </p>
-              <div className="pt-2 text-[9px] font-black text-primary uppercase tracking-[0.2em] opacity-80">
-                 DO NOT CLOSE THIS PAGE OR REFRESH
+            <motion.div className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8 w-full max-w-sm">
+              <div className="w-20 h-20 bg-primary/10 rounded-[32px] flex items-center justify-center mx-auto relative">
+                 <div className="absolute inset-0 border-4 border-primary rounded-[32px] animate-ping opacity-20" />
+                 <RefreshCw className="w-8 h-8 text-primary animate-spin" />
               </div>
-            </div>
-            
-            <div className="space-y-4 pt-4">
-              <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center gap-2">
-                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Network Lock Reference</span>
-                 <code className="text-[10px] font-black text-primary select-all break-all">{transactionRef}</code>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black italic tracking-tighter dark:text-white text-zinc-900">Validating Payment</h2>
+                <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest leading-relaxed px-4 animate-pulse">
+                  {processingMessages[processingMessageIdx]}
+                </p>
+                <div className="pt-2 text-[9px] font-black text-primary uppercase tracking-[0.2em] opacity-80">
+                   DO NOT CLOSE THIS PAGE OR REFRESH
+                </div>
               </div>
+              
+              <div className="space-y-4 pt-4">
+                <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center gap-2">
+                   <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Network Lock Reference</span>
+                   <code className="text-[10px] font-black text-primary select-all break-all">{transactionRef}</code>
+                </div>
 
-              <button
-                 onClick={() => {
-                   showStatusToast('Status sync requested...', 'info');
-                   checkStatusManual();
-                 }}
-                 className="w-full py-4 bg-zinc-100 dark:bg-zinc-800/50 text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center justify-center gap-2 rounded-3xl hover:text-zinc-900 dark:hover:text-white transition-colors"
-              >
-                 <RefreshCw className="w-3 h-3" />
-                 I have completed the PIN prompt
-              </button>
+                <button
+                   onClick={() => {
+                     showStatusToast('Status sync requested...', 'info');
+                     checkStatusManual();
+                   }}
+                   className="w-full py-4 bg-zinc-100 dark:bg-zinc-800/50 text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center justify-center gap-2 rounded-3xl hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                   <RefreshCw className="w-3 h-3" />
+                   I have completed the PIN prompt
+                </button>
 
-              <button
-                 onClick={() => setStep('idle')}
-                 className="w-full py-4 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-3xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-              >
-                 Cancel Authorization
-              </button>
-            </div>
+                <button
+                   onClick={() => setStep('idle')}
+                   className="w-full py-4 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-3xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                >
+                   Cancel Authorization
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         ) : (
           <motion.div 
@@ -503,7 +509,7 @@ export default function Payment() {
             </form>
 
             <p className="text-center text-[9px] font-bold text-zinc-400 uppercase tracking-widest px-10 leading-relaxed opacity-70">
-              By initiating authorization, you confirm a network request for Mobile Money confirmation. All transactions are secured via MarzPay encryption protocols.
+              By initiating authorization, you confirm a network request for Mobile Money confirmation. All transactions are secured via network encryption protocols.
             </p>
           </motion.div>
         )}
