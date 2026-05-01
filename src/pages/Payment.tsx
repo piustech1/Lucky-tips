@@ -62,7 +62,7 @@ export default function Payment() {
       pollingTimer = setInterval(() => {
         console.log(`[Failsafe] Triggering status sync for ${transactionRef}`);
         checkStatusManual();
-      }, 12000); // Poll every 12 seconds
+      }, 8000); // Poll every 8 seconds for faster UX
     }
     
     return () => {
@@ -85,7 +85,10 @@ export default function Payment() {
       const currentStatus = (data.status || '').toLowerCase();
       console.log(`[Realtime] Received status update: ${currentStatus}`);
 
-      if (currentStatus === 'completed' || currentStatus === 'successful') {
+      const isSuccess = ['completed', 'successful', 'success', 'approved'].includes(currentStatus);
+      const isFailed = ['failed', 'cancelled', 'declined', 'error', 'rejected'].includes(currentStatus);
+
+      if (isSuccess) {
         // Double check if already succeeded to avoid multiple triggers
         if (step === 'success') {
           console.log('[Realtime] Suppression: Already in success state.');
@@ -124,7 +127,7 @@ export default function Payment() {
         setTimeout(() => {
           navigate('/profile');
         }, 5000);
-      } else if (currentStatus === 'failed' || currentStatus === 'cancelled' || currentStatus === 'declined') {
+      } else if (isFailed) {
         if (step === 'failed') return;
         setErrorMessage('The transaction was declined by the user or the network was interrupted.');
         setStep('failed');
@@ -217,31 +220,74 @@ export default function Payment() {
   const checkStatusManual = async () => {
     if (!transactionRef) return;
     try {
-      showStatusToast('Synchronizing with network...', 'info');
+      showStatusToast('Syncing with network...', 'info');
       const payload = { path: 'status', reference: transactionRef };
       const response = await fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      const data = await response.json();
-      const statusRes = data.status || data.data?.transaction?.status;
       
-      if (statusRes === 'completed' || statusRes === 'successful') {
-        await update(ref(rtdb, `payments/${transactionRef}`), {
-          status: 'completed',
-          updatedAt: serverTimestamp()
-        });
-      } else if (statusRes === 'failed' || statusRes === 'cancelled') {
+      const raw = await response.text();
+      console.log("[Status Check] Raw Response:", raw);
+      
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        console.error("[Status Check] Parse Error");
+        return;
+      }
+
+      const statusRes = (data.status || data.data?.transaction?.status || '').toLowerCase();
+      console.log(`[Status Check] Normalized Status: ${statusRes}`);
+      
+      const isSuccess = ['completed', 'successful', 'success', 'approved'].includes(statusRes);
+      const isFailed = ['failed', 'cancelled', 'declined', 'error', 'rejected'].includes(statusRes);
+
+      if (isSuccess) {
+        // Direct UI Transition to avoid waiting for listener
+        if (step !== 'success') {
+          console.log("[Status Check] Force transitioning to success state");
+          
+          // Sync Firebase for persistence
+          await update(ref(rtdb, `payments/${transactionRef}`), {
+            status: 'completed',
+            updatedAt: serverTimestamp()
+          });
+
+          // Grant VIP locally and in DB
+          if (profile?.uid) {
+            const durationMs = pkgId === 'daily' ? 24 * 60 * 60 * 1000 : 
+                             pkgId === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 
+                             30 * 24 * 60 * 60 * 1000;
+            const expiryDate = new Date(Date.now() + durationMs);
+            
+            await update(ref(rtdb, `users/${profile.uid}`), {
+              subscriptionTier: 'vip',
+              subscriptionExpiry: expiryDate.toISOString(),
+              lastActivated: Date.now()
+            });
+          }
+          
+          setIsVip(true);
+          setStep('success');
+          showStatusToast('Payment Verified! Access Granted.', 'success');
+          
+          setTimeout(() => navigate('/profile'), 5000);
+        }
+      } else if (isFailed) {
         await update(ref(rtdb, `payments/${transactionRef}`), {
           status: 'failed',
           updatedAt: serverTimestamp()
         });
+        setStep('failed');
       } else {
-        showStatusToast('Still pending. Please authorize on your phone.', 'info');
+        showStatusToast('Authorization pending. Please check your phone.', 'info');
       }
     } catch (err) {
       console.error('Manual check failed:', err);
+      showStatusToast('Network sync error. Retrying...', 'error');
     }
   };
 
