@@ -114,7 +114,7 @@ export default function Payment() {
       setPhoneNumber(localPhone);
       setLoading(false);
       
-      showStatusToast('Payment request successfully initiated. Please check your mobile device for the PIN prompt.', 'success');
+      showStatusToast('Authorization request sent. Please check your phone to confirm the transaction.', 'success');
       
     } catch (error) {
       console.error('Payment Error:', error);
@@ -156,24 +156,41 @@ export default function Payment() {
 
       if (statusResult === 'completed' || statusResult === 'successful') {
         const { update } = await import('firebase/database');
+        
+        // 1. Mark payment as completed in RTDB
         await update(ref(rtdb, `payments/${transactionRef}`), {
           status: 'completed',
           updatedAt: serverTimestamp()
         });
 
+        // 2. Update User Profile with VIP status and Expiry
+        if (profile?.uid) {
+           const durationMs = pkgId === 'daily' ? 24 * 60 * 60 * 1000 : 
+                            pkgId === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 
+                            30 * 24 * 60 * 60 * 1000;
+           
+           const expiryDate = new Date(Date.now() + durationMs);
+           
+           await update(ref(rtdb, `users/${profile.uid}`), {
+             subscriptionTier: 'vip',
+             subscriptionExpiry: expiryDate.toISOString(),
+             lastActivated: Date.now()
+           });
+        }
+
         setSuccess(true);
-        showStatusToast('Payment Successful! Welcome to VIP.', 'success');
+        showStatusToast('Subscription activated successfully. Your VIP access is now ready.', 'success');
         
         setTimeout(() => {
           setIsVip(true);
-          navigate('/vip');
-        }, 4000);
+          navigate('/profile');
+        }, 5000);
       } else if (statusResult === 'failed' || statusResult === 'cancelled') {
         setFailed(true);
-        setErrorMessage('The protocol was interrupted by user or network. Please try again.');
-        showStatusToast('Payment failed or was cancelled.', 'error');
+        setErrorMessage('The transaction was declined or the protocol was interrupted. Please try again.');
+        showStatusToast('Transaction failed or was declined by the user.', 'error');
       } else {
-        showStatusToast('Verification pending. Please ensure you have entered your PIN on your phone.', 'info');
+        showStatusToast('Verification in progress. Please ensure you have entered your PIN on your mobile device.', 'info');
       }
     } catch (error) {
       console.error('Status Check Error:', error);
@@ -201,30 +218,30 @@ export default function Payment() {
       <AnimatePresence>
         {toastConfig && (
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            exit={{ opacity: 0, y: 20 }}
             className={cn(
-              "fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-2xl shadow-xl border flex items-center gap-3 w-[90%] max-w-sm",
-              toastConfig.type === 'success' ? "bg-zinc-900 text-white border-primary/20" : 
-              toastConfig.type === 'error' ? "bg-red-950 text-red-100 border-red-500/20" :
-              "bg-zinc-900 text-white border-white/10"
+              "fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 w-[90%] max-w-sm",
+              toastConfig.type === 'success' ? "bg-zinc-900 text-white border-zinc-800" : 
+              toastConfig.type === 'error' ? "bg-red-950 text-red-50 border-red-900/50" :
+              "bg-zinc-900 text-white border-zinc-800"
             )}
           >
             <div className={cn(
               "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0",
               toastConfig.type === 'success' ? "bg-primary/20" :
               toastConfig.type === 'error' ? "bg-red-500/20" :
-              "bg-blue-500/20"
+              "bg-zinc-500/10"
             )}>
                <CheckCircle2 className={cn(
                  "w-4 h-4",
                  toastConfig.type === 'success' ? "text-primary" :
                  toastConfig.type === 'error' ? "text-red-500" :
-                 "text-blue-500"
+                 "text-zinc-400"
                )} />
             </div>
-            <p className="text-[10px] font-bold leading-tight lowercase first-letter:uppercase">
+            <p className="text-xs font-medium leading-tight">
               {toastConfig.message}
             </p>
           </motion.div>
@@ -259,7 +276,8 @@ export default function Payment() {
         </motion.div>
       ) : failed ? (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          key="failed"
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
         >
@@ -269,7 +287,7 @@ export default function Payment() {
           <div className="space-y-2">
             <h2 className="text-3xl font-black italic tracking-tighter lowercase dark:text-white text-zinc-900">Access Denied</h2>
             <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
-              {errorMessage || 'the protocol was interrupted. please check your balance or pin and try again.'}
+              {errorMessage || 'Payment was unsuccessful. Please check your balance and try again.'}
             </p>
           </div>
           <div className="flex flex-col gap-3 pt-4">
@@ -277,13 +295,57 @@ export default function Payment() {
               onClick={() => { setFailed(false); setTransactionRef(null); }}
               className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl"
             >
-              Retry Protocol
+              Retry Payment
             </button>
             <button 
               onClick={() => navigate('/subscription')}
               className="w-full py-5 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px]"
             >
-              Back to plans
+              Back to Plans
+            </button>
+          </div>
+        </motion.div>
+      ) : transactionRef ? (
+        <motion.div 
+          key="processing"
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
+        >
+          <div className="w-24 h-24 bg-primary/10 rounded-[32px] flex items-center justify-center mx-auto">
+             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black italic tracking-tighter dark:text-white text-zinc-900">Processing Payment</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-6">
+              please enter your pin on your mobile phone to complete the transaction. do not leave this page.
+            </p>
+          </div>
+          
+          <div className="space-y-4 pt-4">
+            <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center gap-2">
+               <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Reference Protocol</span>
+               <code className="text-xs font-black text-primary select-all">{transactionRef}</code>
+            </div>
+
+            <button
+               onClick={checkStatus}
+               disabled={checkingStatus}
+               className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+               {checkingStatus ? (
+                  <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+               ) : (
+                  <RefreshCw className="w-4 h-4" />
+               )}
+               <span>Verify Transaction</span>
+            </button>
+
+            <button
+               onClick={() => setTransactionRef(null)}
+               className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-600 transition-colors"
+            >
+               Cancel Request
             </button>
           </div>
         </motion.div>
@@ -374,44 +436,7 @@ export default function Payment() {
                 )}
               </button>
             </form>
-          ) : (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <div className="p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-3xl space-y-3">
-                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 lowercase italic">
-                  Payment request initiated. check your phone and enter your mobile money pin to complete transaction.
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">ref:</span>
-                  <code className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-black">{transactionRef}</code>
-                </div>
-              </div>
-
-              <button
-                onClick={checkStatus}
-                disabled={checkingStatus}
-                className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {checkingStatus ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                    <span className="lowercase">Verifying...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="lowercase">Check Payment Status</span>
-                    <RefreshCw className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => setTransactionRef(null)}
-                className="w-full text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-600 transition-colors lowercase"
-              >
-                try different number
-              </button>
-            </div>
-          )}
+          ) : null}
 
           <p className="text-center text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-10 leading-relaxed lowercase opacity-70">
             By clicking confirm, you authorize a prompt to be sent to your phone for payment confirmation via MTN or Airtel Mobile Money.

@@ -32,14 +32,22 @@ export default function AdminRevenue() {
       const dataVal = snapshot.val() || {};
       const allPayments = Object.values(dataVal) as any[];
       
-      // Filter for only completed payments to fix calculation error
-      const completedPayments = allPayments.filter(p => (p.status === 'completed' || p.status === 'successful'));
+      // Filter for only completed payments and ensure unique references (case-insensitive)
+      const seenRefs = new Set();
+      const completedAndUnique = allPayments.filter(p => {
+        const isVerified = p.status?.toLowerCase() === 'completed' || p.status?.toLowerCase() === 'successful';
+        if (isVerified && p.reference && !seenRefs.has(p.reference)) {
+          seenRefs.add(p.reference);
+          return true;
+        }
+        return false;
+      });
       
       let totalRevenue = 0;
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weekly = [0, 0, 0, 0, 0, 0, 0];
       
-      completedPayments.forEach(p => {
+      completedAndUnique.forEach(p => {
         const amt = Number(p.amount || 0);
         totalRevenue += amt;
         if (p.timestamp) {
@@ -57,7 +65,7 @@ export default function AdminRevenue() {
         ...prev,
         totalRevenue,
         weeklyData,
-        recentPayments: completedPayments.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 5)
+        recentPayments: completedAndUnique.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 5)
       }));
     });
 

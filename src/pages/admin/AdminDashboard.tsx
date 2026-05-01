@@ -60,14 +60,22 @@ export default function AdminDashboard() {
       const data = snapshot.val() || {};
       const allPayments = Object.values(data) as any[];
       
-      // Filter for completed payments only
-      const completedPayments = allPayments.filter(p => (p.status === 'completed' || p.status === 'successful'));
+      // Filter for completed payments only and ensure unique references (case-insensitive)
+      const seenRefs = new Set();
+      const completedAndUnique = allPayments.filter(p => {
+        const isVerified = p.status?.toLowerCase() === 'completed' || p.status?.toLowerCase() === 'successful';
+        if (isVerified && p.reference && !seenRefs.has(p.reference)) {
+          seenRefs.add(p.reference);
+          return true;
+        }
+        return false;
+      });
       
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const daily = [0, 0, 0, 0, 0, 0, 0];
       let totalRevenue = 0;
       
-      completedPayments.forEach(p => {
+      completedAndUnique.forEach(p => {
         const amt = Number(p.amount || 0);
         totalRevenue += amt;
         if (p.timestamp) {

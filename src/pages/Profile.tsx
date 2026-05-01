@@ -192,7 +192,8 @@ export default function Profile() {
                   <Calendar className="w-5 h-5 text-yellow-500" />
                   <div className="flex flex-col">
                     <span className="text-xl font-black tabular-nums leading-none">
-                      {profile.subscriptionExpiry || (profile.lastActivated ? format(new Date(profile.lastActivated + 24*60*60*1000), 'MMM dd, HH:mm') : 'End of Time')}
+                      {profile.subscriptionExpiry ? format(new Date(profile.subscriptionExpiry), 'MMM dd, HH:mm') : 
+                       (profile.lastActivated ? format(new Date(profile.lastActivated + 24*60*60*1000), 'MMM dd, HH:mm') : 'End of Time')}
                     </span>
                     {timeLeft && (
                       <span className="text-[10px] font-black text-yellow-500 mt-1 uppercase tracking-widest leading-none">
