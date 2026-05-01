@@ -26,6 +26,25 @@ export default function Payment() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toastConfig, setToastConfig] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   const navigate = useNavigate();
+  
+  const [processingMessageIdx, setProcessingMessageIdx] = useState(0);
+  const processingMessages = [
+    'Waiting for your PIN authorization...',
+    'Synchronizing with Mobile Money network...',
+    'Securely verifying transaction via MarzPay...',
+    'Establishing encrypted handshake...',
+    'Awaiting final network clearance...'
+  ];
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 'processing') {
+      timer = setInterval(() => {
+        setProcessingMessageIdx((prev) => (prev + 1) % processingMessages.length);
+      }, 4000);
+    }
+    return () => clearInterval(timer);
+  }, [step]);
  
   // Toast Auto-dismiss
   useEffect(() => {
@@ -47,10 +66,13 @@ export default function Payment() {
       const data = snapshot.val();
       if (!data) return;
 
-      const currentStatus = data.status;
+      const currentStatus = (data.status || '').toLowerCase();
       console.log(`[Realtime] Received status update: ${currentStatus}`);
 
       if (currentStatus === 'completed' || currentStatus === 'successful') {
+        // Double check if already succeeded to avoid multiple triggers
+        if (step === 'success') return;
+
         // GRANT VIP STATUS
         if (profile?.uid) {
            const durationMs = pkgId === 'daily' ? 24 * 60 * 60 * 1000 : 
@@ -69,14 +91,14 @@ export default function Payment() {
         
         setIsVip(true);
         setStep('success');
-        showStatusToast('Subscription activated successfully.', 'success');
+        showStatusToast('Authorization confirmed. Matrix access upgraded.', 'success');
         
-        // Final redirection after 6 seconds of success screen
+        // Final redirection after 5 seconds of success screen
         setTimeout(() => {
           navigate('/profile');
-        }, 6000);
-      } else if (currentStatus === 'failed' || currentStatus === 'cancelled') {
-        setErrorMessage('The transaction was declined or interrupted. Please try again.');
+        }, 5000);
+      } else if (currentStatus === 'failed' || currentStatus === 'cancelled' || currentStatus === 'declined') {
+        setErrorMessage('The transaction was declined by the user or the network was interrupted.');
         setStep('failed');
       }
     });
@@ -314,9 +336,12 @@ export default function Payment() {
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-black italic tracking-tighter dark:text-white text-zinc-900">Validating Payment</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest leading-relaxed px-4">
-                Please check your phone and enter your Mobile Money PIN. <span className="text-primary">Do not navigate away</span> from this screen.
+              <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest leading-relaxed px-4 animate-pulse">
+                {processingMessages[processingMessageIdx]}
               </p>
+              <div className="pt-2 text-[9px] font-black text-primary uppercase tracking-[0.2em] opacity-80">
+                 DO NOT CLOSE THIS PAGE
+              </div>
             </div>
             
             <div className="space-y-4 pt-4">
