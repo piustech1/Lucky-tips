@@ -105,11 +105,18 @@ export default function AdminUsers() {
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (selectedRole === 'all' || (selectedRole === 'admin' ? user.isAdmin : !user.isAdmin))
-  );
+  const filteredUsers = users.filter(user => {
+    const searchLow = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      (user.displayName?.toLowerCase().includes(searchLow)) ||
+      (user.email?.toLowerCase().includes(searchLow)) ||
+      (user.id?.toLowerCase().includes(searchLow));
+    
+    const matchesRole = selectedRole === 'all' || 
+      (selectedRole === 'admin' ? user.isAdmin : !user.isAdmin);
+      
+    return matchesSearch && matchesRole;
+  });
 
   const stats = {
     total: users.length,

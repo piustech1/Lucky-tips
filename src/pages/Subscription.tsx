@@ -8,7 +8,7 @@ const PACKAGES = [
   {
     id: 'daily',
     name: 'daily pack',
-    price: '500',
+    price: '5,000',
     currency: 'UGX',
     duration: '24 hours',
     tier: 'silver',
@@ -21,7 +21,7 @@ const PACKAGES = [
   {
     id: 'weekly',
     name: 'weekly pack',
-    price: '20,000',
+    price: '28,000',
     currency: 'UGX',
     duration: '7 days',
     tier: 'gold',
@@ -34,7 +34,7 @@ const PACKAGES = [
   {
     id: 'monthly',
     name: 'monthly pack',
-    price: '50,000',
+    price: '100,000',
     currency: 'UGX',
     duration: '30 days',
     tier: 'diamond',
@@ -47,7 +47,7 @@ const PACKAGES = [
   {
     id: 'yearly',
     name: 'platinum plan',
-    price: '300,000',
+    price: '850,000',
     currency: 'UGX',
     duration: '1 year',
     tier: 'platinum',

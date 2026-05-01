@@ -639,7 +639,7 @@ function SearchableDropdown({ label, items, value, logo, onSelect }: { label: st
         <div className="absolute left-2 w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 border border-zinc-100">
           <img src={logo || 'https://via.placeholder.com/150'} className="w-full h-full object-contain" onError={(e) => e.currentTarget.src = 'https://via.placeholder.com/150'} />
         </div>
-        <span className={cn("text-xs font-black lowercase", !value && "text-zinc-300")}>{value || `Select ${label}...`}</span>
+        <span className={cn("text-xs font-black lowercase text-zinc-900", !value && "text-zinc-400")}>{value || `Select ${label}...`}</span>
       </div>
 
       <AnimatePresence>
@@ -677,7 +677,7 @@ function SearchableDropdown({ label, items, value, logo, onSelect }: { label: st
                       <div className="w-8 h-8 rounded-lg bg-white border border-zinc-100 p-1 flex items-center justify-center">
                         <img src={item.logo} className="w-full h-full object-contain" />
                       </div>
-                      <span className="text-xs font-black italic lowercase">{item.name}</span>
+                      <span className="text-xs font-black italic lowercase text-zinc-900">{item.name}</span>
                     </div>
                   ))
                 )}

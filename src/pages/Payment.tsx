@@ -15,7 +15,7 @@ export default function Payment() {
   const [searchParams] = useSearchParams();
   const pkgName = searchParams.get('name') || 'Weekly Pack';
   const pkgId = searchParams.get('package') || 'weekly';
-  const amount = searchParams.get('amount') || '20000';
+  const amount = searchParams.get('amount') || '28000';
   const { setPhoneNumber, setIsVip, phoneNumber, profile } = useUser();
   
   const [step, setStep] = useState<PaymentStep>('idle');
@@ -234,8 +234,8 @@ export default function Payment() {
         });
         setStep('failed');
       } else if (statusRes === 'cancelled' || statusRes === 'abandoned') {
-        if (!silent) showStatusToast('Transaction marked abandoned. If you paid, stay on this page.', 'info');
-        console.warn(`[Sync] Transaction ${statusRes}, but holding page active.`);
+        // Silent capture of abandoned status to avoid confusing PIN prompt users
+        console.warn(`[Sync] Transaction ${statusRes}, holding view for real-time update.`);
       }
     } catch (err) {
       console.error('Manual sync failed:', err);
@@ -444,25 +444,37 @@ export default function Payment() {
                     type="button"
                     onClick={() => setProvider('mtn')}
                     className={cn(
-                      "h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border-2",
+                      "h-20 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border-2 flex flex-col items-center justify-center gap-2",
                       provider === 'mtn' 
                         ? "bg-yellow-400 text-black border-yellow-500 shadow-lg shadow-yellow-400/20" 
                         : "bg-white dark:bg-zinc-900 text-zinc-400 border-zinc-100 dark:border-zinc-800"
                     )}
                   >
-                    MTN UGANDA
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/commons/9/93/New-mtn-logo.jpg" 
+                      className="w-8 h-8 rounded-lg object-contain"
+                      alt="MTN"
+                      referrerPolicy="no-referrer"
+                    />
+                    <span>MTN UGANDA</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setProvider('airtel')}
                     className={cn(
-                      "h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border-2",
+                      "h-20 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border-2 flex flex-col items-center justify-center gap-2",
                       provider === 'airtel' 
                         ? "bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20" 
                         : "bg-white dark:bg-zinc-900 text-zinc-400 border-zinc-100 dark:border-zinc-800"
                     )}
                   >
-                    AIRTEL UGANDA
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Airtel_logo-01.png" 
+                      className="w-10 h-6 object-contain brightness-110"
+                      alt="Airtel"
+                      referrerPolicy="no-referrer"
+                    />
+                    <span>AIRTEL UGANDA</span>
                   </button>
                 </div>
 

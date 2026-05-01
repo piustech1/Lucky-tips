@@ -74,31 +74,31 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-6 pb-10 relative">
+    <div className="space-y-3 pb-6 relative">
       {/* Background Hero Image */}
-      <div className="absolute -top-20 -left-4 -right-4 h-[50vh] overflow-hidden pointer-events-none z-0">
+      <div className="absolute -top-10 -left-4 -right-4 h-[35vh] overflow-hidden pointer-events-none z-0">
         <img 
           src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSG00YHbaanlEarMRUyXNGg_e-ltAJhQAhXBtd4E9czCwQHnRTqjv1EYa1u&s=10" 
           alt="Profile Background" 
-          className="w-full h-full object-cover opacity-40 contrast-125 saturate-50"
+          className="w-full h-full object-cover opacity-20 contrast-125 saturate-50 blur-sm"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--background)]/40 to-[var(--background)]" />
       </div>
 
-      <div className="flex justify-center pt-4 relative z-10">
-         <img src={LOGO_URL} alt="Lucky Tip$ Logo" className="w-14 h-14 object-contain drop-shadow-xl" />
+      <div className="flex justify-center pt-2 relative z-10">
+         <img src={LOGO_URL} alt="Lucky Tip$ Logo" className="w-12 h-12 object-contain drop-shadow-xl" />
       </div>
 
       {/* Profile Header */}
-      <section className="relative pt-2 pb-4 flex flex-col items-center z-10">
+      <section className="relative pt-0 pb-1 flex flex-col items-center z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/10 blur-[80px] rounded-full pointer-events-none" />
         
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="relative group mb-6"
+          className="relative group mb-4"
         >
-          <div className="w-32 h-32 rounded-[48px] bg-white border-2 border-primary/20 p-2 shadow-2xl shadow-primary/15">
+          <div className="w-24 h-24 rounded-[36px] bg-white border-2 border-primary/20 p-1.5 shadow-2xl shadow-primary/15">
             <div className="w-full h-full rounded-[38px] overflow-hidden bg-zinc-50 border border-zinc-100 relative">
               <img src={avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
               <button className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
