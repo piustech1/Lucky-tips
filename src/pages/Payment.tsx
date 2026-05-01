@@ -76,26 +76,21 @@ export default function Payment() {
 
     const statusRef = ref(rtdb, `payments/${transactionRef}`);
     
-    console.log(`[Lifecycle] Attaching real-time listener for: ${transactionRef}`);
+    console.log(`[Lifecycle] Monitoring status for: ${transactionRef}`);
     
     const unsubscribe = onValue(statusRef, async (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
       const currentStatus = (data.status || '').toLowerCase();
-      console.log(`[Realtime] Received status update: ${currentStatus}`);
+      console.log(`[Realtime] Current Status: "${currentStatus}" (Transaction: ${transactionRef})`);
 
       const isSuccess = ['completed', 'successful', 'success', 'approved'].includes(currentStatus);
       const isFailed = ['failed', 'cancelled', 'declined', 'error', 'rejected'].includes(currentStatus);
 
       if (isSuccess) {
-        // Double check if already succeeded to avoid multiple triggers
-        if (step === 'success') {
-          console.log('[Realtime] Suppression: Already in success state.');
-          return;
-        }
-
-        console.log('[Realtime] Processing successful payment...');
+        if (step === 'success') return;
+        console.log('[Realtime] Success detected! Transitioning...');
         
         // GRANT VIP STATUS
         if (profile?.uid) {
@@ -121,15 +116,13 @@ export default function Payment() {
         
         setIsVip(true);
         setStep('success');
-        showStatusToast('Authorization confirmed. Matrix access upgraded.', 'success');
+        showStatusToast('Matrix access upgraded. Redirecting...', 'success');
         
-        // Final redirection after 5 seconds of success screen
-        setTimeout(() => {
-          navigate('/profile');
-        }, 5000);
+        setTimeout(() => navigate('/profile'), 5000);
       } else if (isFailed) {
         if (step === 'failed') return;
-        setErrorMessage('The transaction was declined by the user or the network was interrupted.');
+        console.warn(`[Realtime] Failure detected! Remote status: ${currentStatus}`);
+        setErrorMessage(`Transaction ${currentStatus}. If money was taken, visit profile in 5 mins.`);
         setStep('failed');
       }
     });
@@ -143,7 +136,14 @@ export default function Payment() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!localPhone) return;
+    if (loading) return; 
+    
+    // Snappy validation
+    const cleanPhone = localPhone.replace(/\s/g, '');
+    if (cleanPhone.length < 10) {
+      showStatusToast('Please enter a valid phone number.', 'error');
+      return;
+    }
 
     setLoading(true);
     setErrorMessage(null);
@@ -427,22 +427,25 @@ export default function Payment() {
                 {processingMessages[processingMessageIdx]}
               </p>
               <div className="pt-2 text-[9px] font-black text-primary uppercase tracking-[0.2em] opacity-80">
-                 DO NOT CLOSE THIS PAGE
+                 DO NOT CLOSE THIS PAGE OR REFRESH
               </div>
             </div>
             
             <div className="space-y-4 pt-4">
               <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center gap-2">
                  <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Network Lock Reference</span>
-                 <code className="text-xs font-black text-primary select-all">{transactionRef}</code>
+                 <code className="text-[10px] font-black text-primary select-all break-all">{transactionRef}</code>
               </div>
 
               <button
-                 onClick={checkStatusManual}
-                 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center justify-center gap-2 mx-auto hover:text-zinc-900 dark:hover:text-white transition-colors"
+                 onClick={() => {
+                   showStatusToast('Status sync requested...', 'info');
+                   checkStatusManual();
+                 }}
+                 className="w-full py-4 bg-zinc-100 dark:bg-zinc-800/50 text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center justify-center gap-2 rounded-3xl hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
                  <RefreshCw className="w-3 h-3" />
-                 Manually Sync Status
+                 I have completed the PIN prompt
               </button>
 
               <button
@@ -527,13 +530,13 @@ export default function Payment() {
               </div>
 
               <button
-                disabled={loading || !localPhone}
-                className="w-full py-5 bg-primary text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary/20 flex items-center justify-center gap-3 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                type="submit"
+                className="w-full py-5 bg-primary text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all hover:brightness-110"
               >
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span>Processing License...</span>
+                    <span>Initiating...</span>
                   </>
                 ) : (
                   <>
