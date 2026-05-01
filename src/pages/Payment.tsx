@@ -19,23 +19,31 @@ export default function Payment() {
   const [provider, setProvider] = useState<'mtn' | 'airtel'>('mtn');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [toastConfig, setToastConfig] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 5000);
+    if (toastConfig) {
+      const timer = setTimeout(() => setToastConfig(null), 6000);
       return () => clearTimeout(timer);
     }
-  }, [showToast]);
+  }, [toastConfig]);
+
+  const showStatusToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastConfig({ message, type });
+  };
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!localPhone) return;
 
     setLoading(true);
+    setFailed(false);
+    setErrorMessage(null);
     
     try {
       // 1. Call Google Apps Script to initiate MarzPay collection
@@ -93,12 +101,11 @@ export default function Payment() {
       setPhoneNumber(localPhone);
       setLoading(false);
       
-      // Show designed toast instead of alert
-      setShowToast(true);
+      showStatusToast('Payment Initiated! Please check your phone for the PIN prompt.', 'success');
       
     } catch (error) {
       console.error('Payment Error:', error);
-      alert(error instanceof Error ? error.message : 'Payment failed. Please try again.');
+      showStatusToast(error instanceof Error ? error.message : 'Payment failed. Please try again.', 'error');
       setLoading(false);
     }
   };
@@ -106,6 +113,7 @@ export default function Payment() {
   const checkStatus = async () => {
     if (!transactionRef) return;
     setCheckingStatus(true);
+    setErrorMessage(null);
 
     try {
       const payload = {
@@ -126,16 +134,14 @@ export default function Payment() {
         data = JSON.parse(rawText);
       } catch (e) {
         console.error('[Frontend] Invalid JSON from GAS status check:', rawText);
-        throw new Error('Could not verify status. Please wait a moment and try again.');
+        throw new Error('Could not verify status. Please try again.');
       }
       
       console.log('Status check result from GAS:', data);
 
-      // Map GAS status to our app logic
-      const status = data.status || (data.data?.transaction?.status);
+      const statusResult = data.status || (data.data?.transaction?.status);
 
-      if (status === 'completed' || status === 'successful') {
-        // Update Firebase status to completed
+      if (statusResult === 'completed' || statusResult === 'successful') {
         const { update } = await import('firebase/database');
         await update(ref(rtdb, `payments/${transactionRef}`), {
           status: 'completed',
@@ -143,26 +149,29 @@ export default function Payment() {
         });
 
         setSuccess(true);
-        // Activation sequence
+        showStatusToast('Payment Successful! Welcome to VIP.', 'success');
+        
         setTimeout(() => {
           setIsVip(true);
           navigate('/vip');
-        }, 2000);
-      } else if (status === 'failed') {
-        alert('Payment failed or was cancelled.');
+        }, 4000);
+      } else if (statusResult === 'failed' || statusResult === 'cancelled') {
+        setFailed(true);
+        setErrorMessage('The protocol was interrupted by user or network. Please try again.');
+        showStatusToast('Payment failed or was cancelled.', 'error');
       } else {
-        alert('Payment is still pending. Please complete the prompt on your phone.');
+        showStatusToast('Verification pending. Please ensure you have entered your PIN on your phone.', 'info');
       }
     } catch (error) {
       console.error('Status Check Error:', error);
-      alert(error instanceof Error ? error.message : 'Error checking payment status.');
+      showStatusToast(error instanceof Error ? error.message : 'Error checking status.', 'error');
     } finally {
       setCheckingStatus(false);
     }
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 relative min-h-screen">
       <button 
         onClick={() => navigate(-1)}
         className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
@@ -177,49 +186,99 @@ export default function Payment() {
 
       {/* Custom Designed Toast */}
       <AnimatePresence>
-        {showToast && (
+        {toastConfig && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-10 left-6 right-6 z-[100] bg-zinc-900 text-white p-5 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-4"
+            className={cn(
+              "fixed bottom-10 left-6 right-6 z-[100] p-5 rounded-[32px] shadow-2xl border flex items-center gap-4",
+              toastConfig.type === 'success' ? "bg-zinc-900 text-white border-primary/20" : 
+              toastConfig.type === 'error' ? "bg-red-950 text-red-200 border-red-500/20" :
+              "bg-zinc-900 text-white border-white/10"
+            )}
           >
-            <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-               <CheckCircle2 className="w-6 h-6 text-primary" />
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
+              toastConfig.type === 'success' ? "bg-primary/20" :
+              toastConfig.type === 'error' ? "bg-red-500/20" :
+              "bg-blue-500/20"
+            )}>
+               <CheckCircle2 className={cn(
+                 "w-6 h-6",
+                 toastConfig.type === 'success' ? "text-primary" :
+                 toastConfig.type === 'error' ? "text-red-500" :
+                 "text-blue-500"
+               )} />
             </div>
             <div className="flex-1 space-y-0.5">
-              <h4 className="text-sm font-black lowercase tracking-tight">Payment Initiated</h4>
-              <p className="text-[10px] font-bold text-white/50 leading-tight lowercase">
-                check your phone now. enter your mobile money secret pin to confirm the payment.
+              <h4 className="text-sm font-black lowercase tracking-tight">
+                {toastConfig.type === 'success' ? 'Protocol Success' : 
+                 toastConfig.type === 'error' ? 'Protocol Error' : 
+                 'Protocol Alert'}
+              </h4>
+              <p className="text-[10px] font-bold opacity-70 leading-tight lowercase">
+                {toastConfig.message}
               </p>
             </div>
-            <button 
-              onClick={() => setShowToast(false)}
-              className="text-[10px] font-black uppercase text-primary px-3"
-            >
-              ok
-            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
       {success ? (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-green-600 rounded-[40px] p-10 text-center text-white space-y-6 shadow-2xl shadow-green-600/30"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
         >
-          <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-            <ShieldCheck className="w-10 h-10 text-white" />
+          <div className="w-24 h-24 bg-green-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-green-500/20 rotate-3 animate-pulse">
+            <CheckCircle2 className="w-12 h-12 text-white" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-2xl font-black lowercase tracking-tight">payment successful</h3>
-            <p className="text-white/80 font-bold text-xs uppercase tracking-widest leading-relaxed lowercase">
-              Your VIP access is being activated. Please wait while we redirect you.
+            <h2 className="text-3xl font-black italic tracking-tighter lowercase dark:text-white text-zinc-900">Transaction Complete</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
+              your matrix level has been upgraded to VIP. enjoy access to all premium signals.
             </p>
           </div>
-          <div className="flex justify-center">
-             <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+          <div className="pt-4">
+            <div className="bg-zinc-100 dark:bg-zinc-800/50 p-6 rounded-[32px] border border-zinc-200 dark:border-zinc-800">
+               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Receipt reference</p>
+               <code className="text-xs font-black text-primary">{transactionRef}</code>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-3">
+             <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+             <p className="text-[10px] font-black text-zinc-400 lowercase tracking-widest">Redirecting to Vault...</p>
+          </div>
+        </motion.div>
+      ) : failed ? (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
+        >
+          <div className="w-24 h-24 bg-red-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-red-500/20 -rotate-3">
+            <ShieldCheck className="w-12 h-12 text-white" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-black italic tracking-tighter lowercase dark:text-white text-zinc-900">Access Denied</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
+              {errorMessage || 'the protocol was interrupted. please check your balance or pin and try again.'}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 pt-4">
+            <button 
+              onClick={() => { setFailed(false); setTransactionRef(null); }}
+              className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl"
+            >
+              Retry Protocol
+            </button>
+            <button 
+              onClick={() => navigate('/subscription')}
+              className="w-full py-5 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px]"
+            >
+              Back to plans
+            </button>
           </div>
         </motion.div>
       ) : (

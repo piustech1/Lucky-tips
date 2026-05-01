@@ -27,6 +27,35 @@ export default function Profile() {
 
   const avatarUrl = profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.uid}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 
+  const calculateTimeLeft = () => {
+    if (!profile.subscriptionExpiry && !profile.lastActivated) return null;
+    
+    let expiryDate: Date;
+    if (profile.subscriptionExpiry && profile.subscriptionExpiry !== 'End of Time') {
+      expiryDate = new Date(profile.subscriptionExpiry);
+    } else if (profile.lastActivated) {
+      // Default to 24h if only lastActivated exists
+      expiryDate = new Date(profile.lastActivated + 24 * 60 * 60 * 1000);
+    } else {
+      return 'Infinity';
+    }
+
+    const now = new Date();
+    const diff = expiryDate.getTime() - now.getTime();
+
+    if (diff <= 0) return 'Expired';
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 24) {
+      return `${Math.floor(hours / 24)}d ${hours % 24}h remaining`;
+    }
+    return `${hours}h ${minutes}m remaining`;
+  };
+
+  const timeLeft = calculateTimeLeft();
+
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/login');
@@ -161,7 +190,16 @@ export default function Profile() {
                <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] lowercase">Subscription valid until</p>
                <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-yellow-500" />
-                  <span className="text-xl font-black tabular-nums">{profile.subscriptionExpiry || 'End of Time'}</span>
+                  <div className="flex flex-col">
+                    <span className="text-xl font-black tabular-nums leading-none">
+                      {profile.subscriptionExpiry || (profile.lastActivated ? format(new Date(profile.lastActivated + 24*60*60*1000), 'MMM dd, HH:mm') : 'End of Time')}
+                    </span>
+                    {timeLeft && (
+                      <span className="text-[10px] font-black text-yellow-500 mt-1 uppercase tracking-widest leading-none">
+                        {timeLeft}
+                      </span>
+                    )}
+                  </div>
                </div>
             </div>
           </div>

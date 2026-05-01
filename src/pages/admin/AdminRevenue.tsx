@@ -29,15 +29,18 @@ export default function AdminRevenue() {
 
     const unsubscribePayments = onValue(paymentsRef, (snapshot) => {
       const dataVal = snapshot.val() || {};
-      const payments = Object.values(dataVal) as any[];
+      const allPayments = Object.values(dataVal) as any[];
       
-      const totalRevenue = payments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      // Filter for only completed payments to fix calculation error
+      const completedPayments = allPayments.filter(p => p.status === 'completed');
       
-      // Calculate weekly trend
+      const totalRevenue = completedPayments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      
+      // Calculate weekly trend using completed payments
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weekly = [0, 0, 0, 0, 0, 0, 0];
       
-      payments.forEach(p => {
+      completedPayments.forEach(p => {
         if (p.timestamp) {
           const date = new Date(p.timestamp);
           weekly[date.getDay()] += (p.amount || 0);

@@ -12,6 +12,7 @@ interface UserProfile {
   photoURL: string;
   subscriptionTier: 'free' | 'vip';
   subscriptionExpiry: string | null;
+  lastActivated?: number;
   isAdmin: boolean;
   createdAt: number | string;
   sessionId?: string;

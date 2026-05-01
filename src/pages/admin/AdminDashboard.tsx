@@ -58,12 +58,15 @@ export default function AdminDashboard() {
 
     const unsubscribePayments = onValue(paymentsRef, (snapshot) => {
       const data = snapshot.val() || {};
-      const payments = Object.values(data) as any[];
+      const allPayments = Object.values(data) as any[];
+      
+      // Filter for completed payments only
+      const completedPayments = allPayments.filter(p => p.status === 'completed');
       
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const daily = [0, 0, 0, 0, 0, 0, 0];
       
-      payments.forEach(p => {
+      completedPayments.forEach(p => {
         if (p.timestamp) {
           const date = new Date(p.timestamp);
           daily[date.getDay()] += (p.amount || 0);
