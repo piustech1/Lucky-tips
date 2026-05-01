@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, ArrowLeft, Phone, CreditCard, ChevronRight, Zap, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Phone, CreditCard, ChevronRight, Zap, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
-import { ref, serverTimestamp, set } from 'firebase/database';
+import { ref, serverTimestamp, set, onValue, update } from 'firebase/database';
 import { rtdb } from '../lib/firebase';
 import { cn } from '../lib/utils';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbw5sB1eQX8JSYC4pJJ5Voyn1RAtj4jDVyd8_Y13YSsnmn3v_zwCai3p-8Vqd3-cjxwh/exec';
+
+type PaymentStep = 'idle' | 'processing' | 'success' | 'failed';
 
 export default function Payment() {
   const [searchParams] = useSearchParams();
@@ -15,17 +17,17 @@ export default function Payment() {
   const pkgId = searchParams.get('package') || 'weekly';
   const amount = searchParams.get('amount') || '20000';
   const { setPhoneNumber, setIsVip, phoneNumber, profile } = useUser();
+  
+  const [step, setStep] = useState<PaymentStep>('idle');
   const [localPhone, setLocalPhone] = useState(phoneNumber || '');
   const [provider, setProvider] = useState<'mtn' | 'airtel'>('mtn');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [failed, setFailed] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toastConfig, setToastConfig] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   const navigate = useNavigate();
  
+  // Toast Auto-dismiss
   useEffect(() => {
     if (toastConfig) {
       const timer = setTimeout(() => setToastConfig(null), 4000);
@@ -33,18 +35,54 @@ export default function Payment() {
     }
   }, [toastConfig]);
 
-  // Auto-polling for payment status
+  // Real-time Firebase Listener for Payment Status
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (transactionRef && !success && !failed) {
-      interval = setInterval(() => {
-        checkStatus();
-      }, 5000); // Poll every 5 seconds
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [transactionRef, success, failed]);
+    if (!transactionRef || step === 'success' || step === 'failed') return;
+
+    const statusRef = ref(rtdb, `payments/${transactionRef}`);
+    
+    console.log(`[Lifecycle] Attaching real-time listener for: ${transactionRef}`);
+    
+    const unsubscribe = onValue(statusRef, async (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      const currentStatus = data.status;
+      console.log(`[Realtime] Received status update: ${currentStatus}`);
+
+      if (currentStatus === 'completed' || currentStatus === 'successful') {
+        // GRANT VIP STATUS
+        if (profile?.uid) {
+           const durationMs = pkgId === 'daily' ? 24 * 60 * 60 * 1000 : 
+                            pkgId === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 
+                            30 * 24 * 60 * 60 * 1000;
+           
+           const expiryDate = new Date(Date.now() + durationMs);
+           
+           await update(ref(rtdb, `users/${profile.uid}`), {
+             subscriptionTier: 'vip',
+             subscriptionExpiry: expiryDate.toISOString(),
+             lastActivated: Date.now()
+           });
+           console.log(`[Realtime] VIP granted to ${profile.uid}`);
+        }
+        
+        setIsVip(true);
+        setStep('success');
+        showStatusToast('Subscription activated successfully.', 'success');
+        
+        // Final redirection after 6 seconds of success screen
+        setTimeout(() => {
+          navigate('/profile');
+        }, 6000);
+      } else if (currentStatus === 'failed' || currentStatus === 'cancelled') {
+        setErrorMessage('The transaction was declined or interrupted. Please try again.');
+        setStep('failed');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [transactionRef, step, profile?.uid, pkgId, setIsVip, navigate]);
 
   const showStatusToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToastConfig({ message, type });
@@ -55,13 +93,9 @@ export default function Payment() {
     if (!localPhone) return;
 
     setLoading(true);
-    setFailed(false);
     setErrorMessage(null);
     
     try {
-      // 1. Call Google Apps Script to initiate MarzPay collection
-      console.log("=== INITIATING PAYMENT via GAS POST ===");
-      
       const payload = {
         path: 'collect',
         amount: amount,
@@ -81,22 +115,17 @@ export default function Payment() {
       try {
         data = JSON.parse(rawText);
       } catch (e) {
-        console.error('[Frontend] Invalid JSON response from GAS:', rawText);
-        throw new Error('Server returned an invalid response. Please try again later.');
+        throw new Error('Server returned an invalid response. Please try again.');
       }
 
-      console.log("GAS response:", data);
-
       if (!data.success) {
-        throw new Error(data.message || data.error || 'Failed to initiate payment');
+        throw new Error(data.message || data.error || 'Initiation failed');
       }
 
       const reference = data.reference;
-      setTransactionRef(reference);
-
-      // 2. Record pending payment in RTDB
-      const paymentRef = ref(rtdb, `payments/${reference}`);
-      await set(paymentRef, {
+      
+      // Record initiation in RTDB BEFORE updating local state to trigger listener effectively
+      await set(ref(rtdb, `payments/${reference}`), {
         userId: profile?.uid || 'anonymous',
         userName: profile?.displayName || 'Anonymous User',
         userEmail: profile?.email || 'N/A',
@@ -111,99 +140,54 @@ export default function Payment() {
         currency: 'UGX'
       });
 
+      setTransactionRef(reference);
       setPhoneNumber(localPhone);
-      setLoading(false);
-      
-      showStatusToast('Authorization request sent. Please check your phone to confirm the transaction.', 'success');
+      setStep('processing');
+      showStatusToast('Authorization request successfully sent to your device.', 'success');
       
     } catch (error) {
-      console.error('Payment Error:', error);
-      showStatusToast(error instanceof Error ? error.message : 'Payment failed. Please try again.', 'error');
+      console.error('Payment Initiation Error:', error);
+      showStatusToast(error instanceof Error ? error.message : 'Processing failure.', 'error');
+    } finally {
       setLoading(false);
     }
   };
 
-  const checkStatus = async () => {
+  const checkStatusManual = async () => {
     if (!transactionRef) return;
-    setCheckingStatus(true);
-    setErrorMessage(null);
-
     try {
-      const payload = {
-        path: 'status',
-        reference: transactionRef
-      };
-
+      showStatusToast('Synchronizing with network...', 'info');
+      const payload = { path: 'status', reference: transactionRef };
       const response = await fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
+      const data = await response.json();
+      const statusRes = data.status || data.data?.transaction?.status;
       
-      // SAFE JSON PARSING
-      const rawText = await response.text();
-      let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch (e) {
-        console.error('[Frontend] Invalid JSON from GAS status check:', rawText);
-        throw new Error('Could not verify status. Please try again.');
-      }
-      
-      console.log('Status check result from GAS:', data);
-
-      const statusResult = data.status || (data.data?.transaction?.status);
-
-      if (statusResult === 'completed' || statusResult === 'successful') {
-        const { update } = await import('firebase/database');
-        
-        // 1. Mark payment as completed in RTDB
+      if (statusRes === 'completed' || statusRes === 'successful') {
         await update(ref(rtdb, `payments/${transactionRef}`), {
           status: 'completed',
           updatedAt: serverTimestamp()
         });
-
-        // 2. Update User Profile with VIP status and Expiry
-        if (profile?.uid) {
-           const durationMs = pkgId === 'daily' ? 24 * 60 * 60 * 1000 : 
-                            pkgId === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 
-                            30 * 24 * 60 * 60 * 1000;
-           
-           const expiryDate = new Date(Date.now() + durationMs);
-           
-           await update(ref(rtdb, `users/${profile.uid}`), {
-             subscriptionTier: 'vip',
-             subscriptionExpiry: expiryDate.toISOString(),
-             lastActivated: Date.now()
-           });
-        }
-
-        setSuccess(true);
-        showStatusToast('Subscription activated successfully. Your VIP access is now ready.', 'success');
-        
-        setTimeout(() => {
-          setIsVip(true);
-          navigate('/profile');
-        }, 5000);
-      } else if (statusResult === 'failed' || statusResult === 'cancelled') {
-        setFailed(true);
-        setErrorMessage('The transaction was declined or the protocol was interrupted. Please try again.');
-        showStatusToast('Transaction failed or was declined by the user.', 'error');
+      } else if (statusRes === 'failed' || statusRes === 'cancelled') {
+        await update(ref(rtdb, `payments/${transactionRef}`), {
+          status: 'failed',
+          updatedAt: serverTimestamp()
+        });
       } else {
-        showStatusToast('Verification in progress. Please ensure you have entered your PIN on your mobile device.', 'info');
+        showStatusToast('Still pending. Please authorize on your phone.', 'info');
       }
-    } catch (error) {
-      console.error('Status Check Error:', error);
-      showStatusToast(error instanceof Error ? error.message : 'Error checking status.', 'error');
-    } finally {
-      setCheckingStatus(false);
+    } catch (err) {
+      console.error('Manual check failed:', err);
     }
   };
 
   return (
     <div className="space-y-8 pb-12 relative min-h-screen">
       <button 
-        onClick={() => navigate(-1)}
+        onClick={() => step === 'idle' ? navigate(-1) : setStep('idle')}
         className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
       >
         <ArrowLeft className="w-5 h-5 text-zinc-900 dark:text-white" />
@@ -214,7 +198,7 @@ export default function Payment() {
         <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase">Complete your subscription</p>
       </section>
 
-      {/* Custom Designed Toast */}
+      {/* Toast Notification */}
       <AnimatePresence>
         {toastConfig && (
           <motion.div
@@ -241,138 +225,149 @@ export default function Payment() {
                  "text-zinc-400"
                )} />
             </div>
-            <p className="text-xs font-medium leading-tight">
-              {toastConfig.message}
-            </p>
+            <p className="text-xs font-medium leading-tight">{toastConfig.message}</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {success ? (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
-        >
-          <div className="w-24 h-24 bg-green-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-green-500/20 rotate-3 animate-pulse">
-            <CheckCircle2 className="w-12 h-12 text-white" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-black italic tracking-tighter lowercase dark:text-white text-zinc-900">Transaction Complete</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
-              your matrix level has been upgraded to VIP. enjoy access to all premium signals.
-            </p>
-          </div>
-          <div className="pt-4">
-            <div className="bg-zinc-100 dark:bg-zinc-800/50 p-6 rounded-[32px] border border-zinc-200 dark:border-zinc-800">
-               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Receipt reference</p>
-               <code className="text-xs font-black text-primary">{transactionRef}</code>
+      <AnimatePresence mode="wait">
+        {step === 'success' ? (
+          <motion.div 
+            key="success"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
+          >
+            <div className="w-24 h-24 bg-green-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-green-500/20 rotate-3 animate-pulse">
+              <CheckCircle2 className="w-12 h-12 text-white" />
             </div>
-          </div>
-          <div className="flex flex-col items-center gap-3">
-             <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-             <p className="text-[10px] font-black text-zinc-400 lowercase tracking-widest">Redirecting to Vault...</p>
-          </div>
-        </motion.div>
-      ) : failed ? (
-        <motion.div 
-          key="failed"
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
-        >
-          <div className="w-24 h-24 bg-red-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-red-500/20 -rotate-3">
-            <ShieldCheck className="w-12 h-12 text-white" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-black italic tracking-tighter lowercase dark:text-white text-zinc-900">Access Denied</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
-              {errorMessage || 'Payment was unsuccessful. Please check your balance and try again.'}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 pt-4">
-            <button 
-              onClick={() => { setFailed(false); setTransactionRef(null); }}
-              className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl"
-            >
-              Retry Payment
-            </button>
-            <button 
-              onClick={() => navigate('/subscription')}
-              className="w-full py-5 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px]"
-            >
-              Back to Plans
-            </button>
-          </div>
-        </motion.div>
-      ) : transactionRef ? (
-        <motion.div 
-          key="processing"
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
-        >
-          <div className="w-24 h-24 bg-primary/10 rounded-[32px] flex items-center justify-center mx-auto">
-             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black italic tracking-tighter dark:text-white text-zinc-900">Processing Payment</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-6">
-              please enter your pin on your mobile phone to complete the transaction. do not leave this page.
-            </p>
-          </div>
-          
-          <div className="space-y-4 pt-4">
-            <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center gap-2">
-               <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Reference Protocol</span>
-               <code className="text-xs font-black text-primary select-all">{transactionRef}</code>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black italic tracking-tighter dark:text-white text-zinc-900 leading-none">Authentication Success</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
+                your protocol has been elevated to VIP. full access granted to the matrix hub.
+              </p>
             </div>
-
-            <button
-               onClick={checkStatus}
-               disabled={checkingStatus}
-               className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-               {checkingStatus ? (
-                  <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-               ) : (
-                  <RefreshCw className="w-4 h-4" />
-               )}
-               <span>Verify Transaction</span>
-            </button>
-
-            <button
-               onClick={() => setTransactionRef(null)}
-               className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-600 transition-colors"
-            >
-               Cancel Request
-            </button>
-          </div>
-        </motion.div>
-      ) : (
-        <div className="space-y-6">
-          <div className="bg-zinc-900 rounded-[32px] p-8 text-white relative overflow-hidden shadow-xl shadow-black/10">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-              <CreditCard className="w-24 h-24 rotate-12" />
+            <div className="bg-zinc-100 dark:bg-zinc-800/50 p-6 rounded-[32px] border border-zinc-200 dark:border-zinc-800 space-y-4">
+               <div className="flex justify-between items-center text-left">
+                  <div>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Package</p>
+                    <p className="text-sm font-black text-zinc-900 dark:text-white capitalize">{pkgName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Amount Paid</p>
+                    <p className="text-sm font-black text-primary">{parseInt(amount).toLocaleString()} UGX</p>
+                  </div>
+               </div>
+               <div className="pt-2 border-t border-zinc-200 dark:border-zinc-700 text-left">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Receipt ID</p>
+                  <code className="text-xs font-black text-primary break-all">{transactionRef}</code>
+               </div>
             </div>
-            <div className="relative z-10 space-y-6">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest lowercase">Plan Selected</span>
-                <h4 className="text-2xl font-black capitalize lowercase italic tracking-tight">{pkgName}</h4>
+            <div className="flex flex-col items-center gap-3">
+               <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+               <p className="text-[10px] font-black text-zinc-400 lowercase tracking-widest">Entering VIP Vault...</p>
+            </div>
+          </motion.div>
+        ) : step === 'failed' ? (
+          <motion.div 
+            key="failed"
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
+          >
+            <div className="w-24 h-24 bg-red-500 rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-red-500/20 -rotate-3">
+              <XCircle className="w-12 h-12 text-white" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black italic tracking-tighter dark:text-white text-zinc-900 leading-none">Payment Aborted</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase px-4">
+                {errorMessage || 'The transaction could not be completed. Please verify your balance and retry the protocol.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 pt-4">
+              <button 
+                onClick={() => setStep('idle')}
+                className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] shadow-xl"
+              >
+                Retry Request
+              </button>
+              <button 
+                onClick={() => navigate('/subscription')}
+                className="w-full py-5 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px]"
+              >
+                Return to Plans
+              </button>
+            </div>
+          </motion.div>
+        ) : step === 'processing' ? (
+          <motion.div 
+            key="processing"
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white dark:bg-zinc-900 rounded-[48px] p-10 text-center shadow-2xl border border-zinc-100 dark:border-zinc-800 space-y-8"
+          >
+            <div className="w-24 h-24 bg-primary/10 rounded-[32px] flex items-center justify-center mx-auto relative">
+               <div className="absolute inset-0 border-4 border-primary rounded-[32px] animate-ping opacity-20" />
+               <RefreshCw className="w-10 h-10 text-primary animate-spin" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black italic tracking-tighter dark:text-white text-zinc-900">Validating Payment</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest leading-relaxed px-4">
+                Please check your phone and enter your Mobile Money PIN. <span className="text-primary">Do not navigate away</span> from this screen.
+              </p>
+            </div>
+            
+            <div className="space-y-4 pt-4">
+              <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center gap-2">
+                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Network Lock Reference</span>
+                 <code className="text-xs font-black text-primary select-all">{transactionRef}</code>
               </div>
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
-                <span className="font-black text-2xl tracking-tighter">{parseInt(amount).toLocaleString()} UGX</span>
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">ONE-TIME</span>
+
+              <button
+                 onClick={checkStatusManual}
+                 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center justify-center gap-2 mx-auto hover:text-zinc-900 dark:hover:text-white transition-colors"
+              >
+                 <RefreshCw className="w-3 h-3" />
+                 Manually Sync Status
+              </button>
+
+              <button
+                 onClick={() => setStep('idle')}
+                 className="w-full py-4 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-400 rounded-3xl font-black uppercase tracking-widest text-[10px] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                 Cancel Authorization
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="bg-zinc-900 rounded-[32px] p-8 text-white relative overflow-hidden shadow-xl shadow-black/10">
+              <div className="absolute top-0 right-0 p-6 opacity-10">
+                <CreditCard className="w-24 h-24 rotate-12" />
+              </div>
+              <div className="relative z-10 space-y-6">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Plan Selection</span>
+                  <h4 className="text-2xl font-black capitalize italic tracking-tight">{pkgName}</h4>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
+                  <span className="font-black text-3xl tracking-tighter">{parseInt(amount).toLocaleString()} UGX</span>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">One-Time License</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {!transactionRef ? (
             <form onSubmit={handlePayment} className="space-y-6">
               <div className="space-y-4 pt-4">
-                <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-2 lowercase">
-                  Select Your Provider
+                <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-2">
+                  Select Provider
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -401,8 +396,8 @@ export default function Payment() {
                   </button>
                 </div>
 
-                <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-2 block pt-2 lowercase">
-                  Phone for Mobile Money
+                <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest ml-2 block pt-2">
+                  Recipient Identity (Phone)
                 </label>
                 <div className="relative group">
                   <div className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-primary transition-colors">
@@ -426,23 +421,23 @@ export default function Payment() {
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span className="lowercase">Processing...</span>
+                    <span>Processing License...</span>
                   </>
                 ) : (
                   <>
-                    <span className="lowercase">Confirm Payment</span>
+                    <span>Authorize Payment</span>
                     <ChevronRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
-          ) : null}
 
-          <p className="text-center text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-10 leading-relaxed lowercase opacity-70">
-            By clicking confirm, you authorize a prompt to be sent to your phone for payment confirmation via MTN or Airtel Mobile Money.
-          </p>
-        </div>
-      )}
+            <p className="text-center text-[9px] font-bold text-zinc-400 uppercase tracking-widest px-10 leading-relaxed opacity-70">
+              By initiating authorization, you confirm a network request for Mobile Money confirmation. All transactions are secured via MarzPay encryption protocols.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
