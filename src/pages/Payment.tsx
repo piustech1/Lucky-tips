@@ -133,39 +133,50 @@ export default function Payment() {
       });
 
       const rawText = await response.text();
+      console.log("[Payment] GAS Raw Response:", rawText);
+      
       let data;
       try {
         data = JSON.parse(rawText);
       } catch (e) {
-        throw new Error('Server returned an invalid response. Please try again.');
+        // Fallback: If we can see a reference in the text but JSON failed
+        const refMatch = rawText.match(/"reference":"([^"]+)"/);
+        if (refMatch) {
+          data = { success: true, reference: refMatch[1] };
+        } else {
+          throw new Error('Server protocol error. Please check your phone for the PIN prompt.');
+        }
       }
 
-      if (!data.success) {
-        throw new Error(data.message || data.error || 'Initiation failed');
+      // If we have a reference, we consider initiation successful
+      if (data.reference || data.success) {
+        const reference = data.reference || data.data?.reference;
+        
+        if (!reference) throw new Error('Network failed to generate a tracking ID.');
+
+        // Record initiation in RTDB
+        await set(ref(rtdb, `payments/${reference}`), {
+          userId: profile?.uid || 'anonymous',
+          userName: profile?.displayName || 'Anonymous User',
+          userEmail: profile?.email || 'N/A',
+          amount: parseInt(amount),
+          packageId: pkgId,
+          packageName: pkgName,
+          phoneNumber: localPhone,
+          provider: provider,
+          reference: reference,
+          timestamp: serverTimestamp(),
+          status: 'pending',
+          currency: 'UGX'
+        });
+
+        setTransactionRef(reference);
+        setPhoneNumber(localPhone);
+        setStep('processing');
+        showStatusToast('Authorization request sent. Check your phone.', 'success');
+      } else {
+        throw new Error(data.message || 'Initiation failed');
       }
-
-      const reference = data.reference;
-      
-      // Record initiation in RTDB BEFORE updating local state to trigger listener effectively
-      await set(ref(rtdb, `payments/${reference}`), {
-        userId: profile?.uid || 'anonymous',
-        userName: profile?.displayName || 'Anonymous User',
-        userEmail: profile?.email || 'N/A',
-        amount: parseInt(amount),
-        packageId: pkgId,
-        packageName: pkgName,
-        phoneNumber: localPhone,
-        provider: provider,
-        reference: reference,
-        timestamp: serverTimestamp(),
-        status: 'pending',
-        currency: 'UGX'
-      });
-
-      setTransactionRef(reference);
-      setPhoneNumber(localPhone);
-      setStep('processing');
-      showStatusToast('Authorization request successfully sent to your device.', 'success');
       
     } catch (error) {
       console.error('Payment Initiation Error:', error);
