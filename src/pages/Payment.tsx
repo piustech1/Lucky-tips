@@ -60,9 +60,9 @@ export default function Payment() {
     
     if (step === 'processing' && transactionRef) {
       pollingTimer = setInterval(() => {
-        console.log(`[Failsafe] Triggering status sync for ${transactionRef}`);
-        checkStatusManual();
-      }, 8000); // Poll every 8 seconds for faster UX
+        console.log(`[Failsafe Sync] Checking status for ${transactionRef}...`);
+        checkStatusManual(true); // Silent poll
+      }, 10000); // Check every 10 seconds
     }
     
     return () => {
@@ -72,25 +72,24 @@ export default function Payment() {
 
   // Real-time Firebase Listener for Payment Status
   useEffect(() => {
-    if (!transactionRef || step === 'success' || step === 'failed') return;
+    if (!transactionRef || step === 'success') return;
 
     const statusRef = ref(rtdb, `payments/${transactionRef}`);
-    
-    console.log(`[Lifecycle] Monitoring status for: ${transactionRef}`);
     
     const unsubscribe = onValue(statusRef, async (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
       const currentStatus = (data.status || '').toLowerCase();
-      console.log(`[Realtime] Current Status: "${currentStatus}" (Transaction: ${transactionRef})`);
+      console.log(`[Firebase] Remote Update: ${currentStatus}`);
 
       const isSuccess = ['completed', 'successful', 'success', 'approved'].includes(currentStatus);
-      const isFailed = ['failed', 'cancelled', 'declined', 'error', 'rejected'].includes(currentStatus);
+      const isFailed = ['failed', 'declined', 'error', 'rejected'].includes(currentStatus);
+      // 'cancelled' and 'abandoned' are often transient or session-based in UG MM; 
+      // we'll let the user decide if they want to give up or keep waiting for a delayed completed callback.
 
       if (isSuccess) {
         if (step === 'success') return;
-        console.log('[Realtime] Success detected! Transitioning...');
         
         // GRANT VIP STATUS
         if (profile?.uid) {
@@ -99,8 +98,7 @@ export default function Payment() {
                             30 * 24 * 60 * 60 * 1000;
            
            const expiryDate = new Date(Date.now() + durationMs);
-           
-           const updates: any = {
+           const updates = {
              subscriptionTier: 'vip',
              subscriptionExpiry: expiryDate.toISOString(),
              lastActivated: Date.now()
@@ -108,21 +106,18 @@ export default function Payment() {
 
            try {
              await update(ref(rtdb, `users/${profile.uid}`), updates);
-             console.log(`[Realtime] VIP granted and expiry set for ${profile.uid}: ${expiryDate.toISOString()}`);
            } catch (err) {
-             console.error('[Realtime] Failed to grant VIP in RTDB:', err);
+             console.error('Grant Error:', err);
            }
         }
         
         setIsVip(true);
         setStep('success');
-        showStatusToast('Matrix access upgraded. Redirecting...', 'success');
-        
+        showStatusToast('Authorization confirmed. VIP access active.', 'success');
         setTimeout(() => navigate('/profile'), 5000);
       } else if (isFailed) {
         if (step === 'failed') return;
-        console.warn(`[Realtime] Failure detected! Remote status: ${currentStatus}`);
-        setErrorMessage(`Transaction ${currentStatus}. If money was taken, visit profile in 5 mins.`);
+        setErrorMessage(`Transaction ${currentStatus}. If money was deducted, please wait 2 minutes and check profile.`);
         setStep('failed');
       }
     });
@@ -138,10 +133,9 @@ export default function Payment() {
     e.preventDefault();
     if (loading) return; 
     
-    // Snappy validation
     const cleanPhone = localPhone.replace(/\s/g, '');
     if (cleanPhone.length < 10) {
-      showStatusToast('Please enter a valid phone number.', 'error');
+      showStatusToast('Invalid phone number.', 'error');
       return;
     }
 
@@ -149,6 +143,8 @@ export default function Payment() {
     setErrorMessage(null);
     
     try {
+      showStatusToast('Syncing with MarzPay Gateway...', 'info');
+      
       const payload = {
         path: 'collect',
         amount: amount,
@@ -164,33 +160,23 @@ export default function Payment() {
       });
 
       const rawText = await response.text();
-      console.log("[Payment] GAS Raw Response:", rawText);
-      
       let data;
       try {
         data = JSON.parse(rawText);
       } catch (e) {
-        // Fallback: If we can see a reference in the text but JSON failed
         const refMatch = rawText.match(/"reference":"([^"]+)"/);
-        if (refMatch) {
-          data = { status: 'success', reference: refMatch[1] };
-        } else {
-          throw new Error('Server protocol error. Please check your phone for the PIN prompt.');
-        }
+        if (refMatch) data = { status: 'success', reference: refMatch[1] };
+        else throw new Error('Gateway Connection Protocol Error.');
       }
 
-      // Extract reference from various possible locations in the response
-      const reference = data.reference || 
-                       data.data?.reference || 
-                       data.data?.transaction?.reference;
-      
+      const reference = data.reference || data.data?.reference || data.data?.transaction?.reference;
       const isInitiated = data.status === 'success' || data.success || !!reference;
 
       if (isInitiated && reference) {
-        // Record initiation in RTDB
+        // Record initiation in RTDB with full metadata
         await set(ref(rtdb, `payments/${reference}`), {
           userId: profile?.uid || 'anonymous',
-          userName: profile?.displayName || 'Anonymous User',
+          userName: profile?.displayName || 'Anonymous',
           userEmail: profile?.email || 'N/A',
           amount: parseInt(amount),
           packageId: pkgId,
@@ -206,90 +192,53 @@ export default function Payment() {
         setTransactionRef(reference);
         setPhoneNumber(localPhone);
         setStep('processing');
-        showStatusToast('Authorization request sent. Check your phone.', 'success');
+        showStatusToast('PIN prompt sent to phone.', 'success');
       } else {
-        throw new Error(data.message || 'Initiation failed. Check your balance or phone number.');
+        throw new Error(data.message || 'Payment initiation failed.');
       }
       
     } catch (error) {
-      console.error('Payment Initiation Error:', error);
-      showStatusToast(error instanceof Error ? error.message : 'Processing failure.', 'error');
+      showStatusToast(error instanceof Error ? error.message : 'Connection failed.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const checkStatusManual = async () => {
+  const checkStatusManual = async (silent = false) => {
     if (!transactionRef) return;
     try {
-      showStatusToast('Syncing with network...', 'info');
-      const payload = { path: 'status', reference: transactionRef };
+      if (!silent) showStatusToast('Checking network status...', 'info');
+      
       const response = await fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ path: 'status', reference: transactionRef })
       });
       
       const raw = await response.text();
-      console.log("[Status Check] Raw Response:", raw);
-      
       let data;
-      try {
-        data = JSON.parse(raw);
-      } catch (e) {
-        console.error("[Status Check] Parse Error");
-        return;
-      }
+      try { data = JSON.parse(raw); } catch (e) { return; }
 
       const statusRes = (data.status || data.data?.transaction?.status || '').toLowerCase();
-      console.log(`[Status Check] Normalized Status: ${statusRes}`);
       
-      const isSuccess = ['completed', 'successful', 'success', 'approved'].includes(statusRes);
-      const isFailed = ['failed', 'cancelled', 'declined', 'error', 'rejected'].includes(statusRes);
-
-      if (isSuccess) {
-        // Direct UI Transition to avoid waiting for listener
-        if (step !== 'success') {
-          console.log("[Status Check] Force transitioning to success state");
-          
-          // Sync Firebase for persistence
-          await update(ref(rtdb, `payments/${transactionRef}`), {
-            status: 'completed',
-            updatedAt: serverTimestamp()
-          });
-
-          // Grant VIP locally and in DB
-          if (profile?.uid) {
-            const durationMs = pkgId === 'daily' ? 24 * 60 * 60 * 1000 : 
-                             pkgId === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 
-                             30 * 24 * 60 * 60 * 1000;
-            const expiryDate = new Date(Date.now() + durationMs);
-            
-            await update(ref(rtdb, `users/${profile.uid}`), {
-              subscriptionTier: 'vip',
-              subscriptionExpiry: expiryDate.toISOString(),
-              lastActivated: Date.now()
-            });
-          }
-          
-          setIsVip(true);
-          setStep('success');
-          showStatusToast('Payment Verified! Access Granted.', 'success');
-          
-          setTimeout(() => navigate('/profile'), 5000);
-        }
-      } else if (isFailed) {
+      if (['completed', 'successful', 'success', 'approved'].includes(statusRes)) {
+        // Sync Firebase - will trigger listener
+        await update(ref(rtdb, `payments/${transactionRef}`), {
+          status: 'completed',
+          updatedAt: serverTimestamp()
+        });
+      } else if (['failed', 'declined', 'error', 'rejected'].includes(statusRes)) {
         await update(ref(rtdb, `payments/${transactionRef}`), {
           status: 'failed',
           updatedAt: serverTimestamp()
         });
         setStep('failed');
-      } else {
-        showStatusToast('Authorization pending. Please check your phone.', 'info');
+      } else if (statusRes === 'cancelled' || statusRes === 'abandoned') {
+        if (!silent) showStatusToast('Transaction marked abandoned. If you paid, stay on this page.', 'info');
+        console.warn(`[Sync] Transaction ${statusRes}, but holding page active.`);
       }
     } catch (err) {
-      console.error('Manual check failed:', err);
-      showStatusToast('Network sync error. Retrying...', 'error');
+      console.error('Manual sync failed:', err);
     }
   };
 
@@ -531,12 +480,18 @@ export default function Payment() {
 
               <button
                 type="submit"
-                className="w-full py-5 bg-primary text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all hover:brightness-110"
+                disabled={loading}
+                className={cn(
+                  "w-full py-5 rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-xl flex items-center justify-center gap-3 transition-all",
+                  loading 
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed" 
+                    : "bg-primary text-white shadow-primary/20 hover:brightness-110 active:scale-[0.98]"
+                )}
               >
                 {loading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span>Initiating...</span>
+                    <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                    <span>Syncing Network...</span>
                   </>
                 ) : (
                   <>
