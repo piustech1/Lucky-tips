@@ -54,6 +54,22 @@ export default function Payment() {
     }
   }, [toastConfig]);
 
+  // Failsafe Polling
+  useEffect(() => {
+    let pollingTimer: NodeJS.Timeout;
+    
+    if (step === 'processing' && transactionRef) {
+      pollingTimer = setInterval(() => {
+        console.log(`[Failsafe] Triggering status sync for ${transactionRef}`);
+        checkStatusManual();
+      }, 12000); // Poll every 12 seconds
+    }
+    
+    return () => {
+      if (pollingTimer) clearInterval(pollingTimer);
+    };
+  }, [step, transactionRef]);
+
   // Real-time Firebase Listener for Payment Status
   useEffect(() => {
     if (!transactionRef || step === 'success' || step === 'failed') return;
@@ -71,8 +87,13 @@ export default function Payment() {
 
       if (currentStatus === 'completed' || currentStatus === 'successful') {
         // Double check if already succeeded to avoid multiple triggers
-        if (step === 'success') return;
+        if (step === 'success') {
+          console.log('[Realtime] Suppression: Already in success state.');
+          return;
+        }
 
+        console.log('[Realtime] Processing successful payment...');
+        
         // GRANT VIP STATUS
         if (profile?.uid) {
            const durationMs = pkgId === 'daily' ? 24 * 60 * 60 * 1000 : 
@@ -81,12 +102,18 @@ export default function Payment() {
            
            const expiryDate = new Date(Date.now() + durationMs);
            
-           await update(ref(rtdb, `users/${profile.uid}`), {
+           const updates: any = {
              subscriptionTier: 'vip',
              subscriptionExpiry: expiryDate.toISOString(),
              lastActivated: Date.now()
-           });
-           console.log(`[Realtime] VIP granted to ${profile.uid}`);
+           };
+
+           try {
+             await update(ref(rtdb, `users/${profile.uid}`), updates);
+             console.log(`[Realtime] VIP granted and expiry set for ${profile.uid}: ${expiryDate.toISOString()}`);
+           } catch (err) {
+             console.error('[Realtime] Failed to grant VIP in RTDB:', err);
+           }
         }
         
         setIsVip(true);
@@ -98,6 +125,7 @@ export default function Payment() {
           navigate('/profile');
         }, 5000);
       } else if (currentStatus === 'failed' || currentStatus === 'cancelled' || currentStatus === 'declined') {
+        if (step === 'failed') return;
         setErrorMessage('The transaction was declined by the user or the network was interrupted.');
         setStep('failed');
       }
