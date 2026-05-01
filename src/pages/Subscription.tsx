@@ -8,7 +8,7 @@ const PACKAGES = [
   {
     id: 'daily',
     name: 'daily pack',
-    price: '5,000',
+    price: '500',
     currency: 'UGX',
     duration: '24 hours',
     tier: 'silver',

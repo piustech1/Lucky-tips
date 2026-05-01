@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { ShieldCheck, ArrowLeft, Phone, CreditCard, ChevronRight, Zap, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ShieldCheck, ArrowLeft, Phone, CreditCard, ChevronRight, Zap, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { ref, serverTimestamp, set } from 'firebase/database';
@@ -21,7 +21,15 @@ export default function Payment() {
   const [success, setSuccess] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,8 +93,8 @@ export default function Payment() {
       setPhoneNumber(localPhone);
       setLoading(false);
       
-      // Tell user to check phone for PIN prompt
-      alert('Request success! Please check your phone now. a mobile money prompt will appear shortly. Enter your secret PIN to confirm payment.');
+      // Show designed toast instead of alert
+      setShowToast(true);
       
     } catch (error) {
       console.error('Payment Error:', error);
@@ -166,6 +174,34 @@ export default function Payment() {
         <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white leading-none lowercase italic">CHECKOUT</h2>
         <p className="text-zinc-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest lowercase">Complete your subscription</p>
       </section>
+
+      {/* Custom Designed Toast */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-10 left-6 right-6 z-[100] bg-zinc-900 text-white p-5 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-4"
+          >
+            <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+               <CheckCircle2 className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1 space-y-0.5">
+              <h4 className="text-sm font-black lowercase tracking-tight">Payment Initiated</h4>
+              <p className="text-[10px] font-bold text-white/50 leading-tight lowercase">
+                check your phone now. enter your mobile money secret pin to confirm the payment.
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowToast(false)}
+              className="text-[10px] font-black uppercase text-primary px-3"
+            >
+              ok
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {success ? (
         <motion.div 
