@@ -173,18 +173,20 @@ export default function Payment() {
         // Fallback: If we can see a reference in the text but JSON failed
         const refMatch = rawText.match(/"reference":"([^"]+)"/);
         if (refMatch) {
-          data = { success: true, reference: refMatch[1] };
+          data = { status: 'success', reference: refMatch[1] };
         } else {
           throw new Error('Server protocol error. Please check your phone for the PIN prompt.');
         }
       }
 
-      // If we have a reference, we consider initiation successful
-      if (data.reference || data.success) {
-        const reference = data.reference || data.data?.reference;
-        
-        if (!reference) throw new Error('Network failed to generate a tracking ID.');
+      // Extract reference from various possible locations in the response
+      const reference = data.reference || 
+                       data.data?.reference || 
+                       data.data?.transaction?.reference;
+      
+      const isInitiated = data.status === 'success' || data.success || !!reference;
 
+      if (isInitiated && reference) {
         // Record initiation in RTDB
         await set(ref(rtdb, `payments/${reference}`), {
           userId: profile?.uid || 'anonymous',
@@ -206,7 +208,7 @@ export default function Payment() {
         setStep('processing');
         showStatusToast('Authorization request sent. Check your phone.', 'success');
       } else {
-        throw new Error(data.message || 'Initiation failed');
+        throw new Error(data.message || 'Initiation failed. Check your balance or phone number.');
       }
       
     } catch (error) {
