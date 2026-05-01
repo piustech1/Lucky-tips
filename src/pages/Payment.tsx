@@ -28,10 +28,23 @@ export default function Payment() {
  
   useEffect(() => {
     if (toastConfig) {
-      const timer = setTimeout(() => setToastConfig(null), 6000);
+      const timer = setTimeout(() => setToastConfig(null), 4000);
       return () => clearTimeout(timer);
     }
   }, [toastConfig]);
+
+  // Auto-polling for payment status
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (transactionRef && !success && !failed) {
+      interval = setInterval(() => {
+        checkStatus();
+      }, 5000); // Poll every 5 seconds
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [transactionRef, success, failed]);
 
   const showStatusToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToastConfig({ message, type });
@@ -101,7 +114,7 @@ export default function Payment() {
       setPhoneNumber(localPhone);
       setLoading(false);
       
-      showStatusToast('Payment Initiated! Please check your phone for the PIN prompt.', 'success');
+      showStatusToast('Payment request successfully initiated. Please check your mobile device for the PIN prompt.', 'success');
       
     } catch (error) {
       console.error('Payment Error:', error);
@@ -188,39 +201,32 @@ export default function Payment() {
       <AnimatePresence>
         {toastConfig && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             className={cn(
-              "fixed bottom-10 left-6 right-6 z-[100] p-5 rounded-[32px] shadow-2xl border flex items-center gap-4",
+              "fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-2xl shadow-xl border flex items-center gap-3 w-[90%] max-w-sm",
               toastConfig.type === 'success' ? "bg-zinc-900 text-white border-primary/20" : 
-              toastConfig.type === 'error' ? "bg-red-950 text-red-200 border-red-500/20" :
+              toastConfig.type === 'error' ? "bg-red-950 text-red-100 border-red-500/20" :
               "bg-zinc-900 text-white border-white/10"
             )}
           >
             <div className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
+              "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0",
               toastConfig.type === 'success' ? "bg-primary/20" :
               toastConfig.type === 'error' ? "bg-red-500/20" :
               "bg-blue-500/20"
             )}>
                <CheckCircle2 className={cn(
-                 "w-6 h-6",
+                 "w-4 h-4",
                  toastConfig.type === 'success' ? "text-primary" :
                  toastConfig.type === 'error' ? "text-red-500" :
                  "text-blue-500"
                )} />
             </div>
-            <div className="flex-1 space-y-0.5">
-              <h4 className="text-sm font-black lowercase tracking-tight">
-                {toastConfig.type === 'success' ? 'Protocol Success' : 
-                 toastConfig.type === 'error' ? 'Protocol Error' : 
-                 'Protocol Alert'}
-              </h4>
-              <p className="text-[10px] font-bold opacity-70 leading-tight lowercase">
-                {toastConfig.message}
-              </p>
-            </div>
+            <p className="text-[10px] font-bold leading-tight lowercase first-letter:uppercase">
+              {toastConfig.message}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

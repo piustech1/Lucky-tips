@@ -61,15 +61,18 @@ export default function AdminDashboard() {
       const allPayments = Object.values(data) as any[];
       
       // Filter for completed payments only
-      const completedPayments = allPayments.filter(p => p.status === 'completed');
+      const completedPayments = allPayments.filter(p => (p.status === 'completed' || p.status === 'successful'));
       
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const daily = [0, 0, 0, 0, 0, 0, 0];
+      let totalRevenue = 0;
       
       completedPayments.forEach(p => {
+        const amt = Number(p.amount || 0);
+        totalRevenue += amt;
         if (p.timestamp) {
           const date = new Date(p.timestamp);
-          daily[date.getDay()] += (p.amount || 0);
+          daily[date.getDay()] += amt;
         }
       });
 
@@ -80,7 +83,8 @@ export default function AdminDashboard() {
 
       setStats(prev => ({
         ...prev,
-        revenueData
+        revenueData,
+        totalRevenue
       }));
       setLoading(false);
     });
@@ -93,7 +97,7 @@ export default function AdminDashboard() {
   }, []);
 
   const statCards = [
-    { label: 'Total Users', value: stats.totalUsers.toLocaleString(), icon: Users, color: 'bg-blue-500', trend: '+12%' },
+    { label: 'Total Revenue', value: `${(stats as any).totalRevenue?.toLocaleString()} UGX`, icon: Wallet, color: 'bg-emerald-500', trend: 'Live' },
     { label: 'VIP Members', value: stats.activeSubs.toLocaleString(), icon: Wallet, color: 'bg-green-500', trend: '+8%' },
     { label: 'Total Tips', value: stats.totalTips.toLocaleString(), icon: Trophy, color: 'bg-amber-500', trend: '+5%' },
     { label: 'Accuracy', value: `${stats.winRate}%`, icon: CheckCircle2, color: 'bg-purple-500', trend: 'Stable' },

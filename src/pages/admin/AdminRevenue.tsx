@@ -19,7 +19,8 @@ export default function AdminRevenue() {
     totalRevenue: 0,
     activeSubs: 0,
     dailyAvg: 0,
-    weeklyData: [] as any[]
+    weeklyData: [] as any[],
+    recentPayments: [] as any[]
   });
   const [loading, setLoading] = React.useState(true);
 
@@ -32,18 +33,18 @@ export default function AdminRevenue() {
       const allPayments = Object.values(dataVal) as any[];
       
       // Filter for only completed payments to fix calculation error
-      const completedPayments = allPayments.filter(p => p.status === 'completed');
+      const completedPayments = allPayments.filter(p => (p.status === 'completed' || p.status === 'successful'));
       
-      const totalRevenue = completedPayments.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-      
-      // Calculate weekly trend using completed payments
+      let totalRevenue = 0;
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weekly = [0, 0, 0, 0, 0, 0, 0];
       
       completedPayments.forEach(p => {
+        const amt = Number(p.amount || 0);
+        totalRevenue += amt;
         if (p.timestamp) {
           const date = new Date(p.timestamp);
-          weekly[date.getDay()] += (p.amount || 0);
+          weekly[date.getDay()] += amt;
         }
       });
 
@@ -55,7 +56,8 @@ export default function AdminRevenue() {
       setStats(prev => ({
         ...prev,
         totalRevenue,
-        weeklyData
+        weeklyData,
+        recentPayments: completedPayments.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 5)
       }));
     });
 
@@ -163,11 +165,62 @@ export default function AdminRevenue() {
          </div>
       </div>
 
-      {/* Payment methods breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
          <MethodCard icon={Smartphone} label="Direct Mobile" volume={`${(stats.totalRevenue * 0.85).toLocaleString()} UGX`} color="text-amber-500" bg="bg-amber-500/10" />
          <MethodCard icon={CreditCard} label="Bank Transfers" volume={`${(stats.totalRevenue * 0.10).toLocaleString()} UGX`} color="text-blue-500" bg="bg-blue-500/10" />
          <MethodCard icon={Wallet} label="Digital Wallet" volume={`${(stats.totalRevenue * 0.05).toLocaleString()} UGX`} color="text-primary" bg="bg-primary/10" />
+      </div>
+
+      {/* Detailed Transactions List */}
+      <div className="p-10 bg-white border border-[#E9ECEF] rounded-[48px] space-y-8">
+         <div className="flex items-center justify-between">
+            <div>
+               <h3 className="text-2xl font-black italic lowercase tracking-tight leading-none">Recent Vault entries</h3>
+               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest lowercase mt-1">last 5 verified transactions</p>
+            </div>
+            <div className="p-3 bg-zinc-50 rounded-2xl">
+               <Wallet className="w-5 h-5 text-zinc-400" />
+            </div>
+         </div>
+
+         <div className="overflow-x-auto">
+            <table className="w-full text-left">
+               <thead>
+                  <tr className="border-b border-zinc-100">
+                     <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">User</th>
+                     <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Ref</th>
+                     <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount</th>
+                     <th className="pb-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Status</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-zinc-50">
+                  {stats.recentPayments.map((p, i) => (
+                     <tr key={i} className="group">
+                        <td className="py-4">
+                           <p className="text-xs font-black lowercase">{p.userName || 'Anonymous'}</p>
+                           <p className="text-[9px] text-zinc-400 font-bold">{p.userEmail}</p>
+                        </td>
+                        <td className="py-4">
+                           <code className="text-[10px] font-mono text-zinc-400 uppercase">{p.reference?.slice(0, 8)}...</code>
+                        </td>
+                        <td className="py-4">
+                           <span className="text-sm font-black tracking-tighter text-zinc-900">{Number(p.amount).toLocaleString()} UGX</span>
+                        </td>
+                        <td className="py-4 text-right">
+                           <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100">
+                              Verified
+                           </span>
+                        </td>
+                     </tr>
+                  ))}
+                  {stats.recentPayments.length === 0 && (
+                     <tr>
+                        <td colSpan={4} className="py-10 text-center text-[10px] font-black text-zinc-300 uppercase tracking-widest">No verified entries yet</td>
+                     </tr>
+                  )}
+               </tbody>
+            </table>
+         </div>
       </div>
     </div>
   );
