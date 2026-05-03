@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Crown, Zap, Shield, Diamond, Check, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { useUser } from '../contexts/UserContext';
 
 const PACKAGES = [
   {
@@ -62,6 +63,7 @@ const PACKAGES = [
 export default function Subscription() {
   const [activeIndex, setActiveIndex] = useState(1);
   const navigate = useNavigate();
+  const { freeMode } = useUser();
 
   const handleSelect = (pkgId: string, amount: string, name: string) => {
     const rawAmount = amount.replace(/,/g, '');
@@ -72,6 +74,21 @@ export default function Subscription() {
     <div className="space-y-6 pb-12">
       {/* Header */}
       <section className="text-center space-y-2 px-6">
+        {freeMode && (
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="mb-6 p-4 bg-primary/10 border-2 border-primary/20 rounded-3xl flex flex-col items-center gap-2"
+          >
+            <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest">
+              <Zap className="w-4 h-4 fill-primary" />
+              Free Mode Active
+            </div>
+            <p className="text-[9px] font-bold text-[var(--muted-foreground)] lowercase leading-tight">
+              VIP content is currently unlocked for everyone. No payment required.
+            </p>
+          </motion.div>
+        )}
         <h2 className="text-2xl font-black tracking-tight text-[var(--foreground)] leading-none lowercase">become a vip</h2>
         <p className="text-[var(--muted-foreground)] text-[10px] font-bold lowercase tracking-tight max-w-[240px] mx-auto leading-tight">
           unlock the most accurate daily sports predictions from our global analysts.
@@ -140,15 +157,17 @@ export default function Subscription() {
               </div>
 
               <button
-                onClick={() => handleSelect(pkg.id, pkg.price, pkg.name)}
+                onClick={() => freeMode ? navigate('/vip') : handleSelect(pkg.id, pkg.price, pkg.name)}
                 className={cn(
                   "w-full py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95",
-                  pkg.id === 'weekly' 
-                    ? "bg-yellow-500 text-black shadow-yellow-500/20" 
-                    : "bg-premium-gradient text-white shadow-primary/20 hover:scale-[1.02]"
+                  freeMode 
+                    ? "bg-win text-white shadow-win/20" 
+                    : pkg.id === 'weekly' 
+                      ? "bg-yellow-500 text-black shadow-yellow-500/20" 
+                      : "bg-premium-gradient text-white shadow-primary/20 hover:scale-[1.02]"
                 )}
               >
-                select plan
+                {freeMode ? 'Access VIP Now' : 'select plan'}
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>

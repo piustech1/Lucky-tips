@@ -7,6 +7,7 @@ import { Prediction } from '../types';
 import { cn } from '../lib/utils';
 import PredictionCard from '../components/PredictionCard';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 
 const THEMED_CATEGORIES = [
   { id: 'vip', label: 'elite analytics', icon: Crown, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
@@ -21,6 +22,7 @@ export default function VIP() {
   const [catData, setCatData] = useState<{ [key: string]: Prediction[] }>({});
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isVip, freeMode } = useUser();
 
   useEffect(() => {
     const fetchCategorizedData = () => {
@@ -76,15 +78,22 @@ export default function VIP() {
         <div className="space-y-1 relative z-10">
           <h2 className="text-xl font-black tracking-tight text-white italic lowercase">lucky tips analytics</h2>
           <p className="text-white/60 text-[9px] font-black uppercase tracking-[0.1em] max-w-[280px] mx-auto leading-relaxed lowercase">
-            expert predictions powered by ai & human expertise.
+            {freeMode ? 'global free mode active - all analytics unlocked' : 'expert predictions powered by ai & human expertise.'}
           </p>
           <div className="flex justify-center gap-2 pt-4">
-             <button 
-              onClick={() => navigate('/subscription')}
-              className="bg-yellow-500 text-black px-6 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-yellow-500/20 hover:scale-105 transition-transform lowercase"
-             >
-               Go Premium
-             </button>
+             {!isVip && !freeMode ? (
+               <button 
+                onClick={() => navigate('/subscription')}
+                className="bg-yellow-500 text-black px-6 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-yellow-500/20 hover:scale-105 transition-transform lowercase"
+               >
+                 Go Premium
+               </button>
+             ) : (
+               <div className="bg-win/20 border border-win/30 text-win px-6 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 backdrop-blur-sm">
+                  <Shield className="w-3 h-3" />
+                  VIP Status Active
+               </div>
+             )}
              <button 
               onClick={() => navigate('/sections')}
               className="bg-white/10 border border-white/10 text-white px-6 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-sm lowercase"

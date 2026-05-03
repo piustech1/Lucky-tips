@@ -23,6 +23,7 @@ interface UserContextType {
   profile: UserProfile | null;
   loading: boolean;
   isVip: boolean;
+  freeMode: boolean;
   isAdmin: boolean;
   phoneNumber?: string;
   setPhoneNumber: (phone: string) => void;
@@ -36,7 +37,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [freeMode, setFreeMode] = useState(false);
   const [localPhoneNumber, setLocalPhoneNumber] = useState('');
+
+  // Global Settings (Free Mode)
+  useEffect(() => {
+    const settingsRef = ref(rtdb, 'settings');
+    const unsubscribeSettings = onValue(settingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setFreeMode(data.freeMode === true);
+      }
+    });
+    return () => unsubscribeSettings();
+  }, []);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -63,6 +77,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           if (snapshot.exists()) {
             const profileData = snapshot.val() as UserProfile;
             const storedSessionId = localStorage.getItem('lucky_tips_session_id');
+
+            // EXPIRY CHECK: Revoke VIP access if date passed
+            if (profileData.subscriptionTier === 'vip' && profileData.subscriptionExpiry) {
+              const expiryDate = new Date(profileData.subscriptionExpiry).getTime();
+              if (Date.now() > expiryDate) {
+                console.log('[ExpiryGuard] VIP access expired. Revoking...');
+                update(ref(rtdb, `users/${firebaseUser.uid}`), {
+                  subscriptionTier: 'free',
+                  isVip: false, // redundant but safe
+                  updatedAt: new Date().toISOString()
+                });
+              }
+            }
 
             // If session IDs don't match, log out (Second device logged in)
             if (profileData.sessionId && storedSessionId && profileData.sessionId !== storedSessionId) {
@@ -121,7 +148,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     user,
     profile,
     loading,
-    isVip: profile?.subscriptionTier === 'vip',
+    freeMode,
+    isVip: freeMode || profile?.subscriptionTier === 'vip',
     isAdmin: profile?.isAdmin || false,
     phoneNumber: localPhoneNumber,
     setPhoneNumber: setLocalPhoneNumber,

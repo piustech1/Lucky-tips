@@ -1,15 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Settings, Shield, Bell, Wallet, 
   Globe, Database, Key, Trash2, 
-  Save, RefreshCw
+  Save, RefreshCw, ZapOff
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { getActiveKeyIndex, setActiveKeyIndex } from '../../services/apiService';
+import { ref, onValue, set, update } from 'firebase/database';
+import { rtdb } from '../../lib/firebase';
 
 export default function AdminSettings() {
-  const [activeKey, setKey] = React.useState(getActiveKeyIndex());
+  const [activeKey, setKey] = useState(getActiveKeyIndex());
+  const [freeMode, setFreeMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const settingsRef = ref(rtdb, 'settings');
+    const unsubscribe = onValue(settingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setFreeMode(data.freeMode === true);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const toggleFreeMode = async () => {
+    try {
+      const newMode = !freeMode;
+      await update(ref(rtdb, 'settings'), { freeMode: newMode });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleKeyToggle = (index: number) => {
     setActiveKeyIndex(index);
@@ -75,7 +99,7 @@ export default function AdminSettings() {
         </div>
 
         {/* App Config */}
-        <div className="bg-white p-10 rounded-[48px] border border-[#E9ECEF] space-y-10">
+          <div className="bg-white p-10 rounded-[48px] border border-[#E9ECEF] space-y-10">
            <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
                  <Globe className="w-6 h-6 text-primary" />
@@ -84,6 +108,28 @@ export default function AdminSettings() {
            </div>
 
            <div className="space-y-6">
+              <div className="flex items-center justify-between p-6 bg-primary/5 rounded-3xl border-2 border-primary/10 shadow-lg shadow-primary/5">
+                 <div className="space-y-1">
+                    <h5 className="text-[12px] font-black lowercase tracking-tight text-primary flex items-center gap-2">
+                       <ZapOff className="w-4 h-4" />
+                       GLOBAL FREE MODE
+                    </h5>
+                    <p className="text-[9px] font-bold text-zinc-500 lowercase leading-tight max-w-[200px]">Unlock all VIP content and hide payments for all users instantly.</p>
+                 </div>
+                 <button 
+                  type="button"
+                  onClick={toggleFreeMode}
+                  className={cn(
+                    "w-12 h-6 rounded-full relative transition-colors duration-300",
+                    freeMode ? "bg-primary" : "bg-zinc-200"
+                  )}
+                 >
+                    <motion.div 
+                      animate={{ x: freeMode ? 24 : 4 }}
+                      className="absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm" 
+                    />
+                 </button>
+              </div>
               <AdminSettingInput label="App Name Override" value="Lucky Tip$" />
               <AdminSettingInput label="Contact Whatsapp" value="+256 701 234 567" />
               <div className="grid grid-cols-2 gap-4">
