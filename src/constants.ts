@@ -1,4 +1,4 @@
-import { Trophy, Star, Home, FastForward, Flame, TrendingUp, TrendingDown, Crown, Shield } from 'lucide-react';
+import { Trophy, Star, Home, FastForward, Flame, TrendingUp, TrendingDown, Crown, Shield, Target } from 'lucide-react';
 
 export const CATEGORIES = [
   { 
@@ -56,5 +56,26 @@ export const CATEGORIES = [
     icon: TrendingDown,
     heroImage: 'https://img.freepik.com/free-photo/soccer-stadium-night_23-2151952489.jpg?semt=ais_hybrid&w=740&q=80',
     description: 'Strategic and defensive matchups'
+  },
+  { 
+    id: 'hthf', 
+    label: 'Half Time / Full Time', 
+    icon: Flame,
+    heroImage: 'https://img.freepik.com/premium-photo/football-player-stadium-with-bright-lights_23-2148762589.jpg',
+    description: 'Double outcome predictions for maximum value'
+  },
+  { 
+    id: 'ftft', 
+    label: 'Full Time / Full Time', 
+    icon: Star,
+    heroImage: 'https://img.freepik.com/free-photo/man-playing-soccer_23-2148744158.jpg',
+    description: 'Strategic full time result combinations'
+  },
+  { 
+    id: 'cs', 
+    label: 'Correct Score', 
+    icon: Target,
+    heroImage: 'https://img.freepik.com/premium-photo/football-stadium-crowd-fans-watching-match_23-2151624147.jpg',
+    description: 'High-reward precision score predictions'
   }
 ];

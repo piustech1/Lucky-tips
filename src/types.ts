@@ -16,6 +16,9 @@ export interface Prediction {
   score?: string;
   isVip?: boolean;
   category?: string;
+  confidenceLevel?: string;
+  isLive?: boolean;
+  livePulse?: string;
   createdAt?: number;
 }
 

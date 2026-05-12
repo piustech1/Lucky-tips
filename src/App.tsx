@@ -44,6 +44,7 @@ import AdminMarketIntel from './pages/admin/AdminMarketIntel';
 import AdminFeedback from './pages/admin/AdminFeedback';
 import AdminLogoManager from './pages/admin/AdminLogoManager';
 import AdminConflicts from './pages/admin/AdminConflicts';
+import InAppNotification from './components/InAppNotification';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -74,6 +75,7 @@ function AppContent() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <InAppNotification />
       <Routes>
         {/* Onboarding Route */}
         <Route 

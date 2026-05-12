@@ -43,6 +43,8 @@ export default function AdminLogoManager() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [leagueSearch, setLeagueSearch] = useState('');
+  const [teamSearch, setTeamSearch] = useState('');
 
   useEffect(() => {
     fetchLeagues();
@@ -174,6 +176,15 @@ export default function AdminLogoManager() {
     }
   };
 
+  const filteredLeagues = leagues.filter(l => 
+    l.league.name.toLowerCase().includes(leagueSearch.toLowerCase()) ||
+    l.country.name.toLowerCase().includes(leagueSearch.toLowerCase())
+  );
+
+  const filteredTeamsList = teams.filter(t => 
+    t.team.name.toLowerCase().includes(teamSearch.toLowerCase())
+  );
+
   return (
     <div className="space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -239,7 +250,17 @@ export default function AdminLogoManager() {
           <div className="flex items-center gap-3 mb-2">
             <Globe className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-black lowercase tracking-tight text-[var(--foreground)]">Active Leagues</h2>
-            <span className="ml-auto text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{leagues.length} found</span>
+            <span className="ml-auto text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{filteredLeagues.length} found</span>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <input 
+              placeholder="Search leagues or countries..."
+              value={leagueSearch}
+              onChange={(e) => setLeagueSearch(e.target.value)}
+              className="w-full h-12 bg-[var(--card)] border border-[var(--border)] rounded-2xl pl-12 pr-4 text-xs font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            />
           </div>
           
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-[40px] shadow-sm overflow-hidden min-h-[400px]">
@@ -248,14 +269,14 @@ export default function AdminLogoManager() {
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">probing api matrix...</p>
               </div>
-            ) : leagues.length === 0 ? (
+            ) : filteredLeagues.length === 0 ? (
               <div className="h-96 flex flex-col items-center justify-center gap-4">
-                <Shield className="w-10 h-10 text-zinc-200" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">no data found</p>
+                <Search className="w-10 h-10 text-zinc-200" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">no matching leagues</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 p-6 gap-4 overflow-y-auto max-h-[70vh] custom-scrollbar">
-                {leagues.map((l) => (
+                {filteredLeagues.map((l) => (
                   <motion.div
                     key={l.league.id}
                     whileHover={{ scale: 1.02 }}
@@ -293,7 +314,17 @@ export default function AdminLogoManager() {
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-black lowercase tracking-tight text-[var(--foreground)]">League Teams</h2>
-            <span className="ml-auto text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{teams.length} mapped</span>
+            <span className="ml-auto text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{filteredTeamsList.length} mapped</span>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <input 
+              placeholder="Search teams in this league..."
+              value={teamSearch}
+              onChange={(e) => setTeamSearch(e.target.value)}
+              className="w-full h-12 bg-[var(--card)] border border-[var(--border)] rounded-2xl pl-12 pr-4 text-xs font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            />
           </div>
           
           <div className="bg-[var(--card)] border border-[var(--border)] rounded-[40px] shadow-sm overflow-hidden min-h-[400px]">
@@ -302,14 +333,14 @@ export default function AdminLogoManager() {
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">extracting team frequencies...</p>
               </div>
-            ) : teams.length === 0 ? (
+            ) : filteredTeamsList.length === 0 ? (
               <div className="h-96 flex flex-col items-center justify-center gap-4">
                 <Search className="w-10 h-10 text-zinc-200" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">select a league to see teams</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">no teams match search</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 p-6 gap-4 overflow-y-auto max-h-[70vh] custom-scrollbar">
-                {teams.map((t) => (
+                {filteredTeamsList.map((t) => (
                   <motion.div
                     key={t.team.id}
                     initial={{ opacity: 0, scale: 0.9 }}

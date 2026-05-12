@@ -109,6 +109,10 @@ export default function Home() {
   });
   const currentTips = activeTab === 'today' ? todayTips : previousTips;
 
+  const totalOddsValue = todayTips.length > 0 
+    ? todayTips.reduce((acc, t) => acc * parseFloat(t.odds || '1'), 1).toFixed(2)
+    : '0.00';
+
   if (loading) {
     return (
       <div className="space-y-8 pb-10">
@@ -287,6 +291,26 @@ export default function Home() {
         </div>
 
         <div className="space-y-4 pt-4 px-1">
+          {activeTab === 'today' && todayTips.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="px-6 py-4 bg-primary text-white rounded-[24px] shadow-lg shadow-primary/20 flex items-center justify-between mx-1 mb-6"
+            >
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Today's total odds</p>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="text-2xl font-black italic">{totalOddsValue}</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Matches</p>
+                <span className="text-xl font-black italic">{todayTips.length}</span>
+              </div>
+            </motion.div>
+          )}
+
           {loading ? (
              <div className="flex flex-col items-center justify-center py-24 gap-4">
                <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />

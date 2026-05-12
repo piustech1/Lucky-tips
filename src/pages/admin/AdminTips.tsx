@@ -28,6 +28,9 @@ import { recordLog } from '../../lib/adminUtils';
 const CATEGORIES = [
   { id: 'free', label: 'Free Tips', icon: Sparkles },
   { id: 'vip', label: 'VIP Tips', icon: Zap },
+  { id: 'hthf', label: 'HT/FT', icon: TargetIcon },
+  { id: 'ftft', label: 'FT/FT', icon: TargetIcon },
+  { id: 'cs', label: 'Correct Score', icon: TargetIcon },
   { id: '1x', label: '1X Market', icon: TargetIcon },
   { id: 'x2', label: 'X2 Market', icon: TargetIcon },
   { id: 'bts', label: 'Both Score', icon: TargetIcon },
@@ -72,6 +75,9 @@ export default function AdminTips() {
     category: 'free',
     odds: '',
     tip: '',
+    confidenceLevel: '',
+    isLive: false,
+    livePulse: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     time: '18:00',
     isVip: false,
@@ -158,7 +164,7 @@ export default function AdminTips() {
         awayLogo: formData.awayLogo || 'https://via.placeholder.com/150?text=Away',
         leagueLogo: formData.leagueLogo || 'https://via.placeholder.com/50?text=League',
         createdAt: serverTimestamp(),
-        isVip: formData.category === 'vip' || formData.isVip
+        isVip: ['vip', 'hthf', 'ftft', 'cs'].includes(formData.category) || formData.isVip
       };
 
       const predictionsRef = ref(rtdb, 'predictions');
@@ -194,6 +200,9 @@ export default function AdminTips() {
         category: 'free',
         odds: '',
         tip: '',
+        confidenceLevel: '',
+        isLive: false,
+        livePulse: '',
         date: format(new Date(), 'yyyy-MM-dd'),
         time: '18:00',
         isVip: false,
@@ -255,6 +264,12 @@ export default function AdminTips() {
 
   const filteredTips = filter === 'all' ? tips : tips.filter(t => t.category === filter);
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayTips = tips.filter(t => t.date === todayStr && t.status === 'pending');
+  const totalOddsValue = todayTips.length > 0 
+    ? todayTips.reduce((acc, t) => acc * parseFloat(t.odds || '1'), 1).toFixed(2)
+    : '0.00';
+
   return (
     <div className="space-y-10 pb-20">
       <AnimatePresence>
@@ -294,6 +309,12 @@ export default function AdminTips() {
                <p className="text-zinc-500 text-xs font-medium max-w-md lowercase leading-relaxed">
                   Generate high-probability outcomes for the global market. Your insights drive the collective victory.
                </p>
+               <div className="flex items-center gap-4 mt-2">
+                  <div className="px-5 py-2 bg-primary/10 rounded-2xl border border-primary/20 backdrop-blur-sm">
+                     <p className="text-[8px] font-black text-primary uppercase tracking-[0.2em] mb-0.5">Today's Total Odds</p>
+                     <p className="text-xl font-black text-white italic">{totalOddsValue}</p>
+                  </div>
+               </div>
             </div>
 
             <motion.button 
@@ -493,17 +514,66 @@ export default function AdminTips() {
                           </div>
                        </div>
 
-                       <div className="space-y-1">
-                          <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Selected Outcome</label>
-                          <div className="relative">
-                             <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-                             <input 
-                               placeholder="e.g. Both Teams To Score"
-                               value={formData.tip}
-                               onChange={(e) => setFormData({...formData, tip: e.target.value})}
-                               className="w-full h-9 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
-                             />
+                       <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Selected Outcome</label>
+                             <div className="relative">
+                                <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                                <input 
+                                  placeholder="e.g. Both Teams To Score"
+                                  value={formData.tip}
+                                  onChange={(e) => setFormData({...formData, tip: e.target.value})}
+                                  className="w-full h-9 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black lowercase outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
+                                />
+                             </div>
                           </div>
+                          <div className="space-y-1">
+                             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Confidence</label>
+                             <div className="relative">
+                                <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                                <input 
+                                  placeholder="e.g. 85%"
+                                  value={formData.confidenceLevel}
+                                  onChange={(e) => setFormData({...formData, confidenceLevel: e.target.value})}
+                                  className="w-full h-9 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
+                                />
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-3">
+                           <div className="space-y-1">
+                              <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest lowercase ml-1">Live Pulse</label>
+                              <div className="relative">
+                                 <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                                 <input 
+                                   placeholder="e.g. 45'"
+                                   value={formData.livePulse}
+                                   onChange={(e) => setFormData({...formData, livePulse: e.target.value})}
+                                   className="w-full h-9 bg-zinc-50 border border-zinc-200 rounded-lg px-8 text-xs font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-zinc-300"
+                                 />
+                              </div>
+                           </div>
+                           <div className="flex items-end pb-1">
+                              <label className="flex items-center gap-2 cursor-pointer group">
+                                 <div className={cn(
+                                    "w-8 h-4 rounded-full relative transition-all duration-300",
+                                    formData.isLive ? "bg-red-500" : "bg-zinc-200"
+                                 )}>
+                                    <input 
+                                      type="checkbox" 
+                                      className="hidden" 
+                                      checked={formData.isLive} 
+                                      onChange={(e) => setFormData({...formData, isLive: e.target.checked})} 
+                                    />
+                                    <div className={cn(
+                                      "absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all shadow-sm",
+                                      formData.isLive ? "left-4.5" : "left-0.5"
+                                    )} />
+                                 </div>
+                                 <span className="text-[10px] font-black lowercase tracking-tight text-zinc-500 italic">Live match</span>
+                              </label>
+                           </div>
                        </div>
 
                        <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Check, X, Clock, Lock, ShieldCheck } from 'lucide-react';
+import { Check, X, Clock, Lock, ShieldCheck, Zap } from 'lucide-react';
 import { Prediction } from '../types';
 import { cn } from '../lib/utils';
 import { useUser } from '../contexts/UserContext';
@@ -48,7 +48,7 @@ export default function PredictionCard({ prediction, index = 0 }: PredictionCard
       className="bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden shadow-sm transition-all hover:shadow-md hover:border-primary/20 group/card"
     >
       {/* Brand Header */}
-      <div className="bg-primary-dark px-4 py-2.5 flex justify-between items-center text-white">
+      <div className="bg-primary-dark px-4 py-2.5 flex justify-between items-center text-white relative">
         <div className="flex items-center gap-2">
           {prediction.leagueLogo && (
             <img src={prediction.leagueLogo} alt={prediction.league} className="w-4 h-4 object-contain" />
@@ -58,6 +58,22 @@ export default function PredictionCard({ prediction, index = 0 }: PredictionCard
             <span className="bg-yellow-400 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter shadow-sm">vip</span>
           ) : (
             <span className="bg-white/20 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter backdrop-blur-sm">free</span>
+          )}
+          
+          {prediction.isLive && (
+             <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-1.5 ml-2"
+             >
+                <div className="flex items-center gap-1 bg-red-500 px-1.5 py-0.5 rounded-full shadow-lg shadow-red-500/40">
+                   <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                   <span className="text-[7px] font-black uppercase tracking-tighter text-white">live</span>
+                </div>
+                {prediction.livePulse && (
+                  <span className="text-[8px] font-black text-red-400 animate-pulse lowercase italic">{prediction.livePulse}</span>
+                )}
+             </motion.div>
           )}
         </div>
         <span className="text-[10px] font-bold tabular-nums text-white/60 lowercase">{prediction.date}</span>
@@ -128,6 +144,21 @@ export default function PredictionCard({ prediction, index = 0 }: PredictionCard
               )}
             </div>
           </div>
+
+          {prediction.confidenceLevel && !isLocked && (
+            <div className="flex items-center gap-2 pt-1">
+               <div className="flex-1 h-1 bg-zinc-100 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    whileInView={{ width: prediction.confidenceLevel.includes('%') ? prediction.confidenceLevel : '85%' }}
+                    className="h-full bg-win/40"
+                  />
+               </div>
+               <span className="text-[9px] font-black text-win uppercase tracking-tighter">
+                  {prediction.confidenceLevel} confidence
+               </span>
+            </div>
+          )}
         </div>
 
         {/* Right Status Column */}
