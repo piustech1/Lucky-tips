@@ -6,7 +6,7 @@ import { rtdb } from '../lib/firebase';
 import { ref, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 import PredictionCard from '../components/PredictionCard';
 import { CATEGORIES } from '../constants';
-import { AlertTriangle, MessageSquare, Loader2, Trophy, XCircle, Clock, Star, Send } from 'lucide-react';
+import { AlertTriangle, MessageSquare, Loader2, Trophy, XCircle, Clock, Star, Send, TrendingUp } from 'lucide-react';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { cn } from '../lib/utils';
 import { useUser } from '../contexts/UserContext';
